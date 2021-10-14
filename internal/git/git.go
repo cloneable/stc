@@ -31,12 +31,11 @@ func (g Git) ListRefs() ([]Ref, error) {
 	var refs []Ref
 	scan := bufio.NewScanner(&stdout)
 	for scan.Scan() {
-		line := scan.Text()
-		frags := strings.SplitN(line, " ", 2) // XXX regexp parse, check len
-		refs = append(refs, Ref{
-			name:   RefName(frags[1]),
-			commit: Commit(frags[0]),
-		})
+		ref, err := ParseRef(scan.Text())
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse ref: %w", err)
+		}
+		refs = append(refs, ref)
 	}
 
 	return refs, nil
