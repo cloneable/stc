@@ -1,5 +1,7 @@
 package git
 
+import "path"
+
 const labelRefNamespace = "stacker-label"
 
 type RefName string
@@ -12,7 +14,7 @@ func (c Commit) String() string { return string(c) }
 
 type Ref struct {
 	name   RefName
-	commit string
+	commit Commit
 }
 
 type Label struct {
@@ -24,7 +26,7 @@ func NewLabel(name string) Label {
 	return Label{
 		name: name,
 		ref: Ref{
-			name: RefName("refs/" + labelRefNamespace + "/" + name),
+			name: RefName(path.Join("refs", labelRefNamespace, name)),
 		},
 	}
 }

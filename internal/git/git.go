@@ -1,6 +1,7 @@
 package git
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
@@ -19,7 +20,29 @@ type Git struct {
 	path string
 }
 
-func (g Git) Rebase(onto, branchedCommit, branchName string) error {
+func (g Git) ListRefs() ([]Ref, error) {
+	stdout, _, _, err := g.Run(
+		"show-ref",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var refs []Ref
+	scan := bufio.NewScanner(&stdout)
+	for scan.Scan() {
+		line := scan.Text()
+		frags := strings.SplitN(line, " ", 2) // XXX regexp parse, check len
+		refs = append(refs, Ref{
+			name:   RefName(frags[1]),
+			commit: Commit(frags[0]),
+		})
+	}
+
+	return refs, nil
+}
+
+func (g Git) RebaseOnto(onto, branchedCommit, branchName string) error {
 	_, _, _, err := g.Run(
 		"rebase",
 		"--committer-date-is-author-date",
