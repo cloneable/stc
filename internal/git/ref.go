@@ -2,13 +2,18 @@ package git
 
 import (
 	"fmt"
-	"path"
 	"regexp"
+	"strings"
 )
 
-const labelRefNamespace = "stacker-label"
-
 type RefName string
+
+func ParseRefName(name string) (RefName, error) {
+	if !strings.HasPrefix(name, "refs/") {
+		return "", fmt.Errorf("invalid ref name: %q", name)
+	}
+	return RefName(name), nil
+}
 
 func (rn RefName) String() string { return string(rn) }
 
@@ -32,22 +37,4 @@ func ParseRef(line string) (Ref, error) {
 		name:   RefName(groups[2]),
 		commit: Commit(groups[1]),
 	}, nil
-}
-
-type Label struct {
-	name string
-	ref  Ref
-}
-
-func NewLabel(name string) Label {
-	return Label{
-		name: name,
-		ref: Ref{
-			name: RefName(path.Join("refs", labelRefNamespace, name)),
-		},
-	}
-}
-
-func (l Label) Ref() Ref {
-	return l.ref
 }
