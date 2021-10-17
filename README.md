@@ -1,26 +1,31 @@
-# stacker
+# Stacker
 
 Easy git rebasing of stacked feature branches
 
-## Use
+## Workflow
 
-Stacker is good at rebasing multiple local branches that "sit" on each other:
-stacked branches. These are usually branches owned by one person and send as
-individual pull requests. If the base branch changes or any of the branches in
-between the ones on top need to be rebased.
+Stacker is recommended for a workflow where individual contributors work in the
+same repository where commits are made in separate dev branches each owned by
+one contributor and merged via pull request with review into a main or
+topic branch. Stacker helps with managing entire *stacks* of these dev branches,
+i.e. when they are branched off of and depend on each other, allowing for a more
+rapid development.
 
-* `stacker init` checks and creates any stacker-related refs.
-* `stacker show` prints a graph of the entire stack.
-* `stacker clean [--force]` removes any stacker-related refs. `--force` must be
-  used to when cleaning is called mid-rebase.
-* `stacker purge` deletes all deletable (=fully merged) branches.
+## Usage
+
+* `stacker init [--force]` checks and creates any stacker-related refs. If
+  `--force` is used invalid refs are removed or replaced too.
+* `stacker show` lists all stacker tracked branches with status as graph.
+* `stacker clean [--force] [<branch>...]` removes any stacker-related refs.
+  `--force` must be used to when cleaning is called mid-rebase.
 * `stacker create <branch>` creates new branch, marks it for remote tracking and
   switches to it.
-* `stacker rebase [<branch>]` rebases current stack or stack starting at
-  `<branch>`.
-* `stacker push [<branch>]` pushes all outdated branches or all branches
-  starting at `<branch>`.
 * `stacker delete <branch>` safely deletes local branch and remote branch.
+* `stacker rebase [<branch>...]` rebases current stack or stack starting at
+  `<branch>`.
+* `stacker sync [<branch>...]` fetches remote branches of stacker tracked
+  branches and base branches, prunes deleted remote refs and pushes all outdated
+  branches.
 
 ## Under the Hood
 
