@@ -8,20 +8,18 @@ import (
 )
 
 var (
-	initCmd = &cobra.Command{
-		Use:  "init [--force]",
+	showCmd = &cobra.Command{
+		Use:  "show",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("init")
+			fmt.Println("show")
 			s := stacker.Stacker{}
-			return s.Init(forceFlag)
+			return s.Show()
 		},
-		PersistentPreRunE:     overrideRepoValidation,
 		DisableFlagsInUseLine: true,
 	}
 )
 
 func init() {
-	initCmd.Flags().BoolVar(&forceFlag, "force", false, "Source directory to read from")
-	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(showCmd)
 }
