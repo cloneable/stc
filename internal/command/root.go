@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	stackerpkg "github.com/cloneable/stacker/internal/stacker"
 	"github.com/spf13/cobra"
@@ -23,8 +24,17 @@ func validBranchNames(s *stackerpkg.Stacker, min, max int) cobra.PositionalArgs 
 	}
 }
 
+// TODO: fine a better way to init Stacker
+func must(v string, err error) string {
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 var (
-	stacker = stackerpkg.New()
+	workdir = must(os.Getwd())
+	stacker = stackerpkg.New(workdir)
 
 	// used by some subcommands
 	forceFlag bool

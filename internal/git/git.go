@@ -8,8 +8,8 @@ import (
 )
 
 type Git struct {
-	path string
-	Run  func(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error)
+	Dir string
+	Run func(dir string, args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error)
 }
 
 func (g Git) ListRefs() ([]Ref, error) {

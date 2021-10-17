@@ -7,11 +7,11 @@ import (
 	"os/exec"
 )
 
-func Run(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error) {
+func Run(dir string, args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error) {
 	git := exec.Command("git", args...)
 	// TODO: filter env? HOME, PATH, SSH_AUTH_SOCK, GIT_*
 	git.Env = nil
-	git.Dir = "" // TODO: set to repo root?
+	git.Dir = dir
 	git.Stdin = nil
 	git.Stdout = &stdout
 	git.Stderr = &stderr

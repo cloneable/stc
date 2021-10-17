@@ -2,10 +2,12 @@ package fakegit
 
 import (
 	"bytes"
+	"fmt"
+	"os"
+	"strings"
 )
 
-type FakeGit struct{}
-
-func (g FakeGit) Run(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error) {
+func Run(dir string, args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error) {
+	fmt.Fprintf(os.Stderr, "FAKEGIT: git %s", strings.Join(args, " "))
 	return bytes.Buffer{}, bytes.Buffer{}, 0, nil
 }

@@ -16,9 +16,10 @@ type Stacker struct {
 	g git.Git
 }
 
-func New() *Stacker {
+func New(repoPath string) *Stacker {
 	return &Stacker{
 		g: git.Git{
+			Dir: repoPath,
 			Run: realgit.Run, // TODO: make configurable
 		},
 	}
