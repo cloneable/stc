@@ -1,7 +1,12 @@
 package main
 
-import "github.com/cloneable/stacker/internal/command"
+import (
+	"context"
+
+	"github.com/cloneable/stacker/internal/command"
+)
 
 func main() {
-	command.Execute()
+	ctx := context.Background()
+	command.Execute(ctx)
 }

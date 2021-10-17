@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 
-	"github.com/cloneable/stacker/internal/stacker"
 	"github.com/spf13/cobra"
 )
 
@@ -13,8 +12,7 @@ var (
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("init")
-			s := stacker.Stacker{}
-			return s.Init(forceFlag)
+			return stacker.Init(cmd.Context(), forceFlag)
 		},
 		PersistentPreRunE:     overrideRepoValidation,
 		DisableFlagsInUseLine: true,

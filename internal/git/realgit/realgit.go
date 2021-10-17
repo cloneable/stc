@@ -2,33 +2,27 @@ package realgit
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 )
 
-type RealGit struct {
-	path string
-}
-
-func (g RealGit) Run(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error) {
-	git := exec.Cmd{
-		Path: g.path,
-		Args: append([]string{"git"}, args...),
-		Env: []string{
-			"HOME=" + os.Getenv("HOME"),
-			"SSH_AUTH_SOCK=" + os.Getenv("SSH_AUTH_SOCK"),
-		},
-		Dir:    "",  // inherit
-		Stdin:  nil, // /dev/null
-		Stdout: &stdout,
-		Stderr: &stderr,
-	}
+func Run(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error) {
+	git := exec.Command("git", args...)
+	// TODO: filter env? HOME, PATH, SSH_AUTH_SOCK, GIT_*
+	git.Env = nil
+	git.Dir = "" // TODO: set to repo root?
+	git.Stdin = nil
+	git.Stdout = &stdout
+	git.Stderr = &stderr
 
 	err = git.Run()
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		exitCode = exitErr.ExitCode()
 		// err = nil
 	}
+
+	fmt.Fprintf(os.Stderr, "GIT(%d): %v\n", exitCode, git.Args)
 
 	return
 }

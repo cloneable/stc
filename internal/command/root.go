@@ -1,14 +1,18 @@
 package command
 
 import (
+	"context"
 	"fmt"
 
+	stackerpkg "github.com/cloneable/stacker/internal/stacker"
 	"github.com/spf13/cobra"
 )
 
 func overrideRepoValidation(*cobra.Command, []string) error { return nil }
 
 var (
+	stacker = stackerpkg.New()
+
 	// used by some subcommands
 	forceFlag bool
 
@@ -22,6 +26,6 @@ var (
 	}
 )
 
-func Execute() error {
-	return rootCmd.Execute()
+func Execute(ctx context.Context) error {
+	return rootCmd.ExecuteContext(ctx)
 }

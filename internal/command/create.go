@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 
-	"github.com/cloneable/stacker/internal/stacker"
 	"github.com/spf13/cobra"
 )
 
@@ -13,8 +12,7 @@ var (
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("create")
-			s := stacker.Stacker{}
-			return s.Create(args[0])
+			return stacker.Create(cmd.Context(), args[0])
 		},
 		DisableFlagsInUseLine: true,
 	}

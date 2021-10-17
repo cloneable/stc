@@ -1,14 +1,30 @@
 package stacker
 
-import "errors"
+import (
+	"context"
+	"errors"
+
+	"github.com/cloneable/stacker/internal/git"
+	"github.com/cloneable/stacker/internal/git/realgit"
+)
 
 const RefNamespace = "stacker"
 
 var errUnimplemented = errors.New("unimplemented")
 
-type Stacker struct{}
+type Stacker struct {
+	g git.Git
+}
 
-func (s *Stacker) Init(force bool) error {
+func New() *Stacker {
+	return &Stacker{
+		g: git.Git{
+			Run: realgit.Run, // TODO: make configurable
+		},
+	}
+}
+
+func (s *Stacker) Init(ctx context.Context, force bool) error {
 	// TODO: read refs, branches, remotes
 	// TODO: validate stacker refs against branches
 	// TODO: determine list of needed refs
@@ -16,12 +32,12 @@ func (s *Stacker) Init(force bool) error {
 	return errUnimplemented
 }
 
-func (s *Stacker) Show() error {
+func (s *Stacker) Show(ctx context.Context) error {
 	// TODO: list all stacker tracked branches with a status
 	return errUnimplemented
 }
 
-func (s *Stacker) Clean(force bool, branches ...string) error {
+func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) error {
 	// TODO: for each branch
 	// TODO: ... check if fully merged
 	// TODO: ... check if remote ref == local branch
@@ -30,7 +46,7 @@ func (s *Stacker) Clean(force bool, branches ...string) error {
 	return errUnimplemented
 }
 
-func (s *Stacker) Create(branch string) error {
+func (s *Stacker) Create(ctx context.Context, branch string) error {
 	// TODO: determine base branch and its origin
 	// TODO: create new branch off of base branch
 	// TODO: add remote tracking
@@ -38,11 +54,11 @@ func (s *Stacker) Create(branch string) error {
 	return errUnimplemented
 }
 
-func (s *Stacker) Delete(branch string) error {
+func (s *Stacker) Delete(ctx context.Context, branch string) error {
 	return errUnimplemented
 }
 
-func (s *Stacker) Rebase(branches ...string) error {
+func (s *Stacker) Rebase(ctx context.Context, branches ...string) error {
 	// TODO: if len(branch) == 0 use current head as branch (head must be branch head)
 	// TODO: for each branch
 	// TODO: ... determine list of all stacked branches
@@ -54,7 +70,7 @@ func (s *Stacker) Rebase(branches ...string) error {
 	return errUnimplemented
 }
 
-func (s *Stacker) Sync(branches ...string) error {
+func (s *Stacker) Sync(ctx context.Context, branches ...string) error {
 	// TODO: if len(branch) == 0 use current head as branch (head must be branch head)
 	// TODO: for each branch
 	// TODO: ... determine list of all stacked branches
