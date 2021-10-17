@@ -9,7 +9,7 @@ import (
 var (
 	deleteCmd = &cobra.Command{
 		Use:  "delete <branch>",
-		Args: cobra.ExactArgs(1),
+		Args: validBranchNames(stacker, 1, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("delete")
 			return stacker.Delete(cmd.Context(), args[0])

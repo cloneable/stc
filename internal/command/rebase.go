@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/spf13/cobra"
 )
@@ -9,7 +10,7 @@ import (
 var (
 	rebaseCmd = &cobra.Command{
 		Use:  "rebase [<branch>...]",
-		Args: cobra.ArbitraryArgs,
+		Args: validBranchNames(stacker, 0, math.MaxInt),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("rebase")
 			return stacker.Rebase(cmd.Context(), args...)

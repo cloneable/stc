@@ -7,20 +7,13 @@ import (
 	"strings"
 )
 
-var protectedBranches = map[string]bool{
-	"main":       true,
-	"master":     true,
-	"production": true,
-	"release":    true,
-}
-
 type Git struct {
-	path   string
-	runner func(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error)
+	path string
+	Run  func(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error)
 }
 
 func (g Git) ListRefs() ([]Ref, error) {
-	stdout, _, _, err := g.runner(
+	stdout, _, _, err := g.Run(
 		"show-ref",
 	)
 	if err != nil {
@@ -41,7 +34,7 @@ func (g Git) ListRefs() ([]Ref, error) {
 }
 
 func (g Git) RebaseOnto(onto, branchedCommit, branchName string) error {
-	_, _, _, err := g.runner(
+	_, _, _, err := g.Run(
 		"rebase",
 		"--committer-date-is-author-date",
 		"--onto",
@@ -57,7 +50,7 @@ func (g Git) RebaseOnto(onto, branchedCommit, branchName string) error {
 }
 
 func (g Git) Push(branchName, remoteName, expectedCommit string) error {
-	_, _, _, err := g.runner(
+	_, _, _, err := g.Run(
 		"push",
 		"--porcelain",
 		fmt.Sprintf("--force-with-lease=%s:%s", branchName, expectedCommit),
@@ -71,7 +64,7 @@ func (g Git) Push(branchName, remoteName, expectedCommit string) error {
 }
 
 func (g Git) GetRef(refName RefName) (Ref, error) {
-	_, _, _, err := g.runner(
+	_, _, _, err := g.Run(
 		"show-ref",
 		"--verify",
 		refName.String(),
@@ -84,7 +77,7 @@ func (g Git) GetRef(refName RefName) (Ref, error) {
 }
 
 func (g Git) CreateRef(refName, commit string) error {
-	_, _, _, err := g.runner(
+	_, _, _, err := g.Run(
 		"update-ref",
 		"--create-reflog",
 		refName,
@@ -99,7 +92,7 @@ func (g Git) CreateRef(refName, commit string) error {
 }
 
 func (g Git) UpdateRef(refName, newCommit, oldCommit string) error {
-	_, _, _, err := g.runner(
+	_, _, _, err := g.Run(
 		"update-ref",
 		"--create-reflog",
 		refName,
@@ -114,11 +107,24 @@ func (g Git) UpdateRef(refName, newCommit, oldCommit string) error {
 }
 
 func (g Git) DeleteRef(refName, oldCommit string) error {
-	_, _, _, err := g.runner(
+	_, _, _, err := g.Run(
 		"update-ref",
 		"-d",
 		refName,
 		oldCommit,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g Git) CheckBranchName(name string) error {
+	_, _, _, err := g.Run(
+		"check-ref-format",
+		"--branch",
+		name,
 	)
 	if err != nil {
 		return err
