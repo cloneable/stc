@@ -1,4 +1,4 @@
-package git
+package realgit
 
 import (
 	"bytes"
@@ -6,11 +6,11 @@ import (
 	"os/exec"
 )
 
-type realGit struct {
+type RealGit struct {
 	path string
 }
 
-func (g realGit) Run(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error) {
+func (g RealGit) Run(args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, exitCode int, err error) {
 	git := exec.Cmd{
 		Path: g.path,
 		Args: append([]string{"git"}, args...),
