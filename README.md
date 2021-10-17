@@ -9,16 +9,18 @@ stacked branches. These are usually branches owned by one person and send as
 individual pull requests. If the base branch changes or any of the branches in
 between the ones on top need to be rebased.
 
-* `stacker init` will check and create any stacker-related refs.
-* `stacker clean [--force]` will remove any stacker-related refs. `--force` must
-  be used to when cleaning is called mid-rebase.
-* `stacker create <branch>` will create new branch, mark for remote tracking and
-  switch to it.
-* `stacker rebase [<branch>]` will rebase current stack or stack starting at
+* `stacker init` checks and creates any stacker-related refs.
+* `stacker show` prints a graph of the entire stack.
+* `stacker clean [--force]` removes any stacker-related refs. `--force` must be
+  used to when cleaning is called mid-rebase.
+* `stacker purge` deletes all deletable (=fully merged) branches.
+* `stacker create <branch>` creates new branch, marks it for remote tracking and
+  switches to it.
+* `stacker rebase [<branch>]` rebases current stack or stack starting at
   `<branch>`.
-* `stacker push [<branch>]` will push all outdated branches or all branches
+* `stacker push [<branch>]` pushes all outdated branches or all branches
   starting at `<branch>`.
-* `stacker delete <branch>` will safely delete local branch and remote branch.
+* `stacker delete <branch>` safely deletes local branch and remote branch.
 
 ## Under the Hood
 
@@ -35,26 +37,28 @@ Stacker uses custom refs to track branches:
    The commit where the branch starts. Created when a branch is created. Updated
    after a rebase. Deleted when the branch is deleted.
 
+Stacker does not update/delete any refs outside `refs/stacker/`.
+
 ## Used Git Commands
 
 Following is the list of all used git commands. `git` is called with all
 environment variables inherited from `stacker`. <br> Protected branch names:
-master, main, release, production, staging. These names will not be used with
-any commands, with the exception of rebasing `--onto`.
+master, main, release, production, staging. These names are not used with any
+commands, with the exception of rebasing `--onto`.
 
 1. `git for-each-ref --format='%(HEAD)%(refname) %(objecttype) %(objectname) %(upstream:remotename) %(upstream)'`
 
    Gather all refs at startup.
 
-2. `git update-ref --create-reflog refs/stacker/base/<branch> <commit> 0000000000000000000000000000000000000000`
+2.`git update-ref --create-reflog refs/stacker/start/<branch> <commit> 0000000000000000000000000000000000000000`
 
    Mark the base of a branch with a new ref.
 
-3. `git update-ref --create-reflog refs/stacker/base/<branch> <new-commit> <old-commit>`
+3. `git update-ref --create-reflog refs/stacker/start/<branch> <new-commit> <old-commit>`
 
    Move the base marker after rebasing.
 
-4. `git update-ref -d refs/stacker/base/<branch> <commit>`
+4. `git update-ref -d refs/stacker/start/<branch> <commit>`
 
    Delete the base marker.
 
