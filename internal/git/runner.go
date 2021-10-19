@@ -248,3 +248,20 @@ func (g Runner) SwitchBranch(name BranchName) error {
 
 	return nil
 }
+
+func (g Runner) PushUpstream(remoteBranch BranchName, remote string) error {
+	res, err := g.exec(
+		"push",
+		"--set-upstream",
+		remote,
+		string(remoteBranch),
+	)
+	if err != nil {
+		return fmt.Errorf("failure running command: %w", err)
+	}
+	if res.ExitCode != 0 {
+		return fmt.Errorf("command failed with %d", res.ExitCode)
+	}
+
+	return nil
+}

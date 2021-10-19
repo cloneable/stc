@@ -7,6 +7,7 @@ type Git interface {
 	CurrentBranch() (BranchName, error)
 	CreateBranch(newBranch, baseBranch BranchName) error
 	SwitchBranch(branch BranchName) error
+	PushUpstream(branch BranchName, remote string) error
 }
 
 type BranchName string

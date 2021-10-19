@@ -69,6 +69,14 @@ func (s *Stacker) Create(ctx context.Context, name string) error {
 	return nil
 }
 
+func (s *Stacker) Publish(ctx context.Context, branches ...string) error {
+	// TODO: for each branch
+	// TODO: ... determine state (already pushed?)
+	// TODO: ... determine upstream
+	// TODO: ... push branch to remote
+	return errUnimplemented
+}
+
 func (s *Stacker) Delete(ctx context.Context, branch string) error {
 	return errUnimplemented
 }
