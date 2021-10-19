@@ -15,7 +15,7 @@ import (
 func newRepo(t *testing.T) string {
 	t.Helper()
 
-	// tmpDir, err := os.MkdirTemp("/Users/fb/tmp", "stacker-test-*")
+	// tmpDir, err := os.MkdirTemp(os.TempDir(), "stacker-test-*")
 	// if err != nil {
 	// 	t.Fatalf("cannot create tmp dir: %v", err)
 	// }
