@@ -3,9 +3,9 @@ package stacker
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/cloneable/stacker/internal/git"
-	"github.com/cloneable/stacker/internal/git/realgit"
 )
 
 const RefNamespace = "stacker"
@@ -13,14 +13,14 @@ const RefNamespace = "stacker"
 var errUnimplemented = errors.New("unimplemented")
 
 type Stacker struct {
-	g git.Git
+	git git.Git
 }
 
 func New(repoPath string) *Stacker {
 	return &Stacker{
-		g: git.Git{
-			Dir: repoPath,
-			Run: realgit.Run, // TODO: make configurable
+		git: &git.Runner{
+			Env:     nil,
+			WorkDir: repoPath,
 		},
 	}
 }
@@ -48,11 +48,21 @@ func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) err
 }
 
 func (s *Stacker) Create(ctx context.Context, branch string) error {
+	cur, err := s.git.CurrentBranch()
+	if err != nil {
+		return fmt.Errorf("CurrentBranch: %w", err)
+	}
+	if err := s.git.CreateBranch(branch, cur); err != nil {
+		return fmt.Errorf("CreateBranch: %w", err)
+	}
+	if err := s.git.SwitchBranch(branch); err != nil {
+		return fmt.Errorf("SwitchBranch: %w", err)
+	}
 	// TODO: determine base branch and its origin
 	// TODO: create new branch off of base branch
 	// TODO: add remote tracking
 	// TODO: set stacker refs: base symref, start commit
-	return errUnimplemented
+	return nil
 }
 
 func (s *Stacker) Delete(ctx context.Context, branch string) error {

@@ -3,14 +3,22 @@ package stacker
 import (
 	"bytes"
 	"context"
+	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/cloneable/stacker/internal/git"
 )
 
 func newRepo(t *testing.T) string {
 	t.Helper()
 
+	// tmpDir, err := os.MkdirTemp("/Users/fb/tmp", "stacker-test-*")
+	// if err != nil {
+	// 	t.Fatalf("cannot create tmp dir: %v", err)
+	// }
 	tmpDir := t.TempDir()
 
 	pathOrigin := filepath.Join(tmpDir, "test-origin.git")
@@ -39,6 +47,18 @@ func newRepo(t *testing.T) string {
 	return pathRepo
 }
 
+var cmdEnv = []string{
+	// Make commit reproducible.
+	"GIT_CONFIG_GLOBAL=/dev/null",
+	"GIT_CONFIG_SYSTEM=/dev/null",
+	"GIT_AUTHOR_NAME=tester",
+	"GIT_AUTHOR_EMAIL=tester@example.com",
+	"GIT_AUTHOR_DATE=1600000000 +0000",
+	"GIT_COMMITTER_NAME=tester",
+	"GIT_COMMITTER_EMAIL=tester@example.com",
+	"GIT_COMMITTER_DATE=1600000000 +0000",
+}
+
 func cmd(t *testing.T, dir, name string, args ...string) {
 	t.Helper()
 	stdout := bytes.Buffer{}
@@ -47,6 +67,7 @@ func cmd(t *testing.T, dir, name string, args ...string) {
 		name,
 		args...,
 	)
+	c.Env = cmdEnv
 	c.Dir = dir
 	c.Stdout = &stdout
 	c.Stderr = &stderr
@@ -54,6 +75,27 @@ func cmd(t *testing.T, dir, name string, args ...string) {
 		t.Log("STDOUT:\n", stdout.String())
 		t.Log("STDERR:\n", stderr.String())
 		t.Fatalf("command failed: %v", err)
+	}
+}
+
+func copyFile(t *testing.T, src, dst string) {
+	t.Helper()
+
+	srcFile, err := os.Open(src)
+	if err != nil {
+		t.Fatalf("cannot open src file: %v", err)
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		t.Fatalf("cannot create dst file: %v", err)
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	if err != nil {
+		t.Fatalf("cannot copy file: %v", err)
 	}
 }
 
@@ -67,6 +109,18 @@ func TestInit(t *testing.T) {
 	cmd(t, gitDir, "git", "commit", "-m", "initial")
 	cmd(t, gitDir, "git", "push", "-u", "origin")
 
-	stkr := New(gitDir)
-	stkr.Init(ctx, false)
+	os.WriteFile(gitDir+"/README.md", []byte("# State 0\n"), 0x600)
+	cmd(t, gitDir, "git", "add", "README.md")
+	cmd(t, gitDir, "git", "commit", "-m", "state 0")
+	cmd(t, gitDir, "git", "push", "-u", "origin")
+
+	stkr := Stacker{
+		git: &git.Runner{
+			WorkDir: gitDir,
+			Env:     cmdEnv,
+		},
+	}
+	if err := stkr.Create(ctx, "test-branch-0"); err != nil {
+		t.Fatal(err)
+	}
 }

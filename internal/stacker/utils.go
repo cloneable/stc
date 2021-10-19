@@ -9,7 +9,9 @@ func (s *Stacker) ValidBranchName(name string) bool {
 	if strings.ContainsRune(name, '/') {
 		return false
 	}
-	return s.g.CheckBranchName(name) == nil
+	ok, err := s.git.ValidBranchName(name)
+	// TODO: handle err
+	return err == nil && ok
 }
 
 func (s *Stacker) ValidBranchNames(names ...string) bool {
