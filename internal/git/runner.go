@@ -187,23 +187,23 @@ func (g Runner) DeleteRef(refName, oldCommit string) error {
 	return nil
 }
 
-func (g Runner) CheckBranchName(name string) error {
+func (g Runner) ParseBranchName(name string) (BranchName, error) {
 	res, err := g.exec(
 		"check-ref-format",
 		"--branch",
 		name,
 	)
 	if err != nil {
-		return fmt.Errorf("failure running command: %w", err)
+		return "", fmt.Errorf("failure running command: %w", err)
 	}
 	if res.ExitCode != 0 {
-		return fmt.Errorf("command failed with %d", res.ExitCode)
+		return "", fmt.Errorf("command failed with %d", res.ExitCode)
 	}
 
-	return nil
+	return BranchName(name), nil
 }
 
-func (g Runner) CurrentBranch() (string, error) {
+func (g Runner) CurrentBranch() (BranchName, error) {
 	res, err := g.exec(
 		"branch",
 		"--show-current",
@@ -214,14 +214,14 @@ func (g Runner) CurrentBranch() (string, error) {
 	if res.ExitCode != 0 {
 		return "", fmt.Errorf("command failed with %d", res.ExitCode)
 	}
-	return strings.TrimSpace(res.Stdout.String()), nil
+	return BranchName(strings.TrimSpace(res.Stdout.String())), nil
 }
 
-func (g Runner) CreateBranch(name, baseName string) error {
+func (g Runner) CreateBranch(name, baseName BranchName) error {
 	res, err := g.exec(
 		"branch",
-		name,
-		baseName,
+		string(name),
+		string(baseName),
 	)
 	if err != nil {
 		return fmt.Errorf("failure running command: %w", err)
@@ -233,11 +233,11 @@ func (g Runner) CreateBranch(name, baseName string) error {
 	return nil
 }
 
-func (g Runner) SwitchBranch(name string) error {
+func (g Runner) SwitchBranch(name BranchName) error {
 	res, err := g.exec(
 		"switch",
 		"--no-guess",
-		name,
+		string(name),
 	)
 	if err != nil {
 		return fmt.Errorf("failure running command: %w", err)

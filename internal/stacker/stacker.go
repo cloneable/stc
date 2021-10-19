@@ -47,10 +47,14 @@ func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) err
 	return errUnimplemented
 }
 
-func (s *Stacker) Create(ctx context.Context, branch string) error {
+func (s *Stacker) Create(ctx context.Context, name string) error {
 	cur, err := s.git.CurrentBranch()
 	if err != nil {
 		return fmt.Errorf("CurrentBranch: %w", err)
+	}
+	branch, err := s.git.ParseBranchName(name)
+	if err != nil {
+		return fmt.Errorf("ParseBranchName: %w", err)
 	}
 	if err := s.git.CreateBranch(branch, cur); err != nil {
 		return fmt.Errorf("CreateBranch: %w", err)
