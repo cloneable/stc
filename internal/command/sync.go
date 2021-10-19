@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	syncCmd = &cobra.Command{
+func init() {
+	syncCmd := &cobra.Command{
 		Use:  "sync [<branch>...]",
 		Args: validBranchNames(stacker, 0, math.MaxInt),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -17,8 +17,5 @@ var (
 		},
 		DisableFlagsInUseLine: true,
 	}
-)
-
-func init() {
 	rootCmd.AddCommand(syncCmd)
 }

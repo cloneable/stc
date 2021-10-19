@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	rebaseCmd = &cobra.Command{
+func init() {
+	rebaseCmd := &cobra.Command{
 		Use:  "rebase [<branch>...]",
 		Args: validBranchNames(stacker, 0, math.MaxInt),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -17,8 +17,5 @@ var (
 		},
 		DisableFlagsInUseLine: true,
 	}
-)
-
-func init() {
 	rootCmd.AddCommand(rebaseCmd)
 }

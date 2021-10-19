@@ -17,7 +17,7 @@ func validBranchNames(s *stackerpkg.Stacker, min, max int) cobra.PositionalArgs 
 		if len(args) < min || len(args) > max {
 			return errors.New("invalid number of branch names")
 		}
-		if !stacker.ValidBranchNames(args...) {
+		if !s.ValidBranchNames(args...) {
 			return errors.New("invalid branch name")
 		}
 		return nil

@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	deleteCmd = &cobra.Command{
+func init() {
+	deleteCmd := &cobra.Command{
 		Use:  "delete <branch>",
 		Args: validBranchNames(stacker, 1, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -16,8 +16,5 @@ var (
 		},
 		DisableFlagsInUseLine: true,
 	}
-)
-
-func init() {
 	rootCmd.AddCommand(deleteCmd)
 }

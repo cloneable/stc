@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	createCmd = &cobra.Command{
+func init() {
+	createCmd := &cobra.Command{
 		Use:  "create <branch>",
 		Args: validBranchNames(stacker, 1, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -16,8 +16,5 @@ var (
 		},
 		DisableFlagsInUseLine: true,
 	}
-)
-
-func init() {
 	rootCmd.AddCommand(createCmd)
 }

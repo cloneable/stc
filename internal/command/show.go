@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	showCmd = &cobra.Command{
+func init() {
+	showCmd := &cobra.Command{
 		Use:  "show",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -16,8 +16,5 @@ var (
 		},
 		DisableFlagsInUseLine: true,
 	}
-)
-
-func init() {
 	rootCmd.AddCommand(showCmd)
 }

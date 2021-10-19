@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	cleanCmd = &cobra.Command{
+func init() {
+	cleanCmd := &cobra.Command{
 		Use:  "clean [--force] [<branch>...]",
 		Args: validBranchNames(stacker, 0, math.MaxInt),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -17,9 +17,6 @@ var (
 		},
 		DisableFlagsInUseLine: true,
 	}
-)
-
-func init() {
 	cleanCmd.Flags().BoolVar(&forceFlag, "force", false, "Source directory to read from")
 	rootCmd.AddCommand(cleanCmd)
 }
