@@ -104,14 +104,15 @@ func TestInit(t *testing.T) {
 	ctx := context.Background()
 
 	gitDir := newRepo(t)
-	cmd(t, gitDir, "touch", "README.md")
-	cmd(t, gitDir, "git", "add", "README.md")
-	cmd(t, gitDir, "git", "commit", "-m", "initial")
+
+	os.WriteFile(gitDir+"/main.txt", []byte("0\n"), 0o600)
+	cmd(t, gitDir, "git", "add", "main.txt")
+	cmd(t, gitDir, "git", "commit", "-m", "main: state 0")
 	cmd(t, gitDir, "git", "push", "-u", "origin")
 
-	os.WriteFile(gitDir+"/README.md", []byte("# State 0\n"), 0x600)
-	cmd(t, gitDir, "git", "add", "README.md")
-	cmd(t, gitDir, "git", "commit", "-m", "state 0")
+	os.WriteFile(gitDir+"/main.txt", []byte("1\n"), 0o600)
+	cmd(t, gitDir, "git", "add", "main.txt")
+	cmd(t, gitDir, "git", "commit", "-m", "main: state 1")
 	cmd(t, gitDir, "git", "push", "-u", "origin")
 
 	stkr := Stacker{
@@ -120,7 +121,12 @@ func TestInit(t *testing.T) {
 			Env:     cmdEnv,
 		},
 	}
-	if err := stkr.Create(ctx, "test-branch-0"); err != nil {
+	if err := stkr.Create(ctx, "test-branch-1"); err != nil {
 		t.Fatal(err)
 	}
+
+	os.WriteFile(gitDir+"/test-branch-1.txt", []byte("0\n"), 0o600)
+	cmd(t, gitDir, "git", "add", "test-branch-1.txt")
+	cmd(t, gitDir, "git", "commit", "-m", "test-branch-1: state 0")
+	cmd(t, gitDir, "git", "push", "-u", "origin", "test-branch-1")
 }

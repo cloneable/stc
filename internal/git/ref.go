@@ -22,8 +22,8 @@ type Commit string
 func (c Commit) String() string { return string(c) }
 
 type Ref struct {
-	name   RefName
-	commit Commit
+	Name   RefName
+	Commit Commit
 }
 
 var refLineRE = regexp.MustCompile("^([0-9a-f]{40}) (refs/.*)$")
@@ -34,7 +34,7 @@ func ParseRef(line string) (Ref, error) {
 		return Ref{}, fmt.Errorf("invalid line: %q", line)
 	}
 	return Ref{
-		name:   RefName(groups[2]),
-		commit: Commit(groups[1]),
+		Name:   RefName(groups[2]),
+		Commit: Commit(groups[1]),
 	}, nil
 }

@@ -131,15 +131,20 @@ func (g Runner) GetRef(refName RefName) (Ref, error) {
 		return Ref{}, fmt.Errorf("command failed with %d", res.ExitCode)
 	}
 
-	return Ref{}, nil
+	ref, err := ParseRef(strings.TrimSpace(res.Stdout.String()))
+	if err != nil {
+		return Ref{}, fmt.Errorf("cannot parse ref: %w", err)
+	}
+
+	return ref, nil
 }
 
-func (g Runner) CreateRef(refName, commit string) error {
+func (g Runner) CreateRef(refName RefName, commit Commit) error {
 	res, err := g.exec(
 		"update-ref",
 		"--create-reflog",
-		refName,
-		commit,
+		string(refName),
+		string(commit),
 		strings.Repeat("0", 40),
 	)
 	if err != nil {
@@ -255,6 +260,24 @@ func (g Runner) PushUpstream(remoteBranch BranchName, remote string) error {
 		"--set-upstream",
 		remote,
 		string(remoteBranch),
+	)
+	if err != nil {
+		return fmt.Errorf("failure running command: %w", err)
+	}
+	if res.ExitCode != 0 {
+		return fmt.Errorf("command failed with %d", res.ExitCode)
+	}
+
+	return nil
+}
+
+func (g Runner) CreateSymref(name, target RefName, reason string) error {
+	res, err := g.exec(
+		"symbolic-ref",
+		"-m",
+		reason,
+		string(name),
+		string(target),
 	)
 	if err != nil {
 		return fmt.Errorf("failure running command: %w", err)

@@ -3,7 +3,6 @@ package stacker
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/cloneable/stacker/internal/git"
 )
@@ -48,25 +47,15 @@ func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) err
 }
 
 func (s *Stacker) Create(ctx context.Context, name string) error {
-	cur, err := s.git.CurrentBranch()
-	if err != nil {
-		return fmt.Errorf("CurrentBranch: %w", err)
-	}
-	branch, err := s.git.ParseBranchName(name)
-	if err != nil {
-		return fmt.Errorf("ParseBranchName: %w", err)
-	}
-	if err := s.git.CreateBranch(branch, cur); err != nil {
-		return fmt.Errorf("CreateBranch: %w", err)
-	}
-	if err := s.git.SwitchBranch(branch); err != nil {
-		return fmt.Errorf("SwitchBranch: %w", err)
-	}
-	// TODO: determine base branch and its origin
-	// TODO: create new branch off of base branch
-	// TODO: add remote tracking
-	// TODO: set stacker refs: base symref, start commit
-	return nil
+	op := op(s.git)
+	baseB := op.currentBranch()
+	newName := op.parseBranchName(name)
+	newB := op.createBranch(newName, baseB)
+	op.switchBranch(newB)
+	op.createSymref(newB, baseB, "stacker: mark base branch")
+	ref := op.getRef(baseB)
+	op.createRef(newB, ref.Commit)
+	return op.Err()
 }
 
 func (s *Stacker) Publish(ctx context.Context, branches ...string) error {
