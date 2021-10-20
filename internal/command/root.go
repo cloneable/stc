@@ -42,7 +42,7 @@ var (
 	rootCmd = &cobra.Command{
 		Use: "stacker <command>",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("validate stacker refs")
+			fmt.Fprintln(os.Stderr, "validate stacker refs")
 			return nil
 		},
 		DisableFlagsInUseLine: true,
