@@ -121,7 +121,7 @@ func TestInit(t *testing.T) {
 			Env:     cmdEnv,
 		},
 	}
-	if err := stkr.Create(ctx, "test-branch-1"); err != nil {
+	if err := stkr.Start(ctx, "test-branch-1"); err != nil {
 		t.Fatal(err)
 	}
 

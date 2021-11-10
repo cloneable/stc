@@ -46,7 +46,7 @@ func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) err
 	return errUnimplemented
 }
 
-func (s *Stacker) Create(ctx context.Context, name string) error {
+func (s *Stacker) Start(ctx context.Context, name string) error {
 	op := op(s.git)
 	baseB := op.currentBranch()
 	newName := op.parseBranchName(name)
