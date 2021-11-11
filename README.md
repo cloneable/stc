@@ -6,19 +6,35 @@ Easy git rebasing of stacked feature branches
 
 Stacker is recommended for a workflow where individual contributors work in the
 same repository where commits are made in separate dev branches each owned by
-one contributor and merged via pull request with review into a main or
-topic branch. Stacker helps with managing entire *stacks* of these dev branches,
-i.e. when they are branched off of and depend on each other, allowing for a more
-rapid development.
+one contributor and merged via pull request with code review into the main
+branch or a topic branch. Stacker helps with managing entire *stacks* of these
+dev branches, i.e. when they are branched off of and depend on each other,
+allowing for a more rapid development.
+
+## Installation
+
+Requires Go toolchain 1.17 or later.
+
+```sh
+go install github.com/cloneable/stacker@latest
+```
+
+Make sure `stacker` is in your $PATH.
+
+```sh
+export PATH=$(go env GOPATH)/bin:$PATH
+```
 
 ## Usage
 
+(Planned Features)
+
 * `stacker init [--force]` checks and creates any stacker-related refs. If
   `--force` is used invalid refs are removed or replaced too.
-* `stacker show` lists all stacker tracked branches with status as graph.
 * `stacker clean [--force] [<branch>...]` removes any stacker-related refs.
   `--force` must be used to when cleaning is called mid-rebase.
-* `stacker create <branch>` creates new branch, marks it for remote tracking and
+* `stacker show` lists all stacker tracked branches with status as graph.
+* `stacker start <branch>` starts new branch, marks it for remote tracking and
   switches to it.
 * `stacker publish <branch>...` pushes one or more branches to remote and
   marks them for tracking.
@@ -57,7 +73,7 @@ commands, with the exception of rebasing `--onto`.
 
    Gather all refs at startup.
 
-2.`git update-ref --create-reflog refs/stacker/start/<branch> <commit> 0000000000000000000000000000000000000000`
+2. `git update-ref --create-reflog refs/stacker/start/<branch> <commit> 0000000000000000000000000000000000000000`
 
    Mark the base of a branch with a new ref.
 
@@ -73,14 +89,12 @@ commands, with the exception of rebasing `--onto`.
 
    Get commit of refs.
 
-6. `git rebase --committer-date-is-author-date --onto <base-branch> <base-marker> <branch>`
+6. `git rebase --committer-date-is-author-date --onto refs/stacker/base/<branch> refs/stacker/start/<branch> <branch>`
 
    Rebasing a branch onto base branch starting at base marker. If there are
    conflict, rebasing will stop. Fix conflicts and use `--continue` or
-   `--abort`.
+   `--abort`. After a successful rebase the start marker ref will be moved.
 
 7. `git push --force-with-lease=<branch>:<expected-commit> <local-branch>:<remote-branch>`
 
    Push a rebased branch to remote, replacing the commit chain.
-
-TODO: use `git check-ref-format` to check names?

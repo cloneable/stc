@@ -1,8 +1,6 @@
 package command
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -11,12 +9,13 @@ func init() {
 		Use:  "init [--force]",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("init")
 			return stacker.Init(cmd.Context(), forceFlag)
 		},
 		PersistentPreRunE:     overrideRepoValidation,
 		DisableFlagsInUseLine: true,
+
+		Short: "Initializes the repo and tries to set stacker refs for any non-default branches.",
 	}
-	initCmd.Flags().BoolVar(&forceFlag, "force", false, "Source directory to read from")
+	initCmd.Flags().BoolVar(&forceFlag, "force", false, "Force removal or overwriting of broken stacker refs")
 	rootCmd.AddCommand(initCmd)
 }

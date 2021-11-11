@@ -16,8 +16,9 @@ type Stacker struct {
 func New(repoPath string) *Stacker {
 	return &Stacker{
 		git: &git.Runner{
-			Env:     nil,
-			WorkDir: repoPath,
+			Env:           nil,
+			WorkDir:       repoPath,
+			PrintCommands: true,
 		},
 	}
 }

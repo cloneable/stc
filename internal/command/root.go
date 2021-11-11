@@ -38,6 +38,8 @@ var (
 	// used by some subcommands
 	forceFlag bool
 
+	printCommandsFlag bool
+
 	rootCmd = &cobra.Command{
 		Use: "stacker <command>",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -47,6 +49,10 @@ var (
 		DisableFlagsInUseLine: true,
 	}
 )
+
+func init() {
+	rootCmd.PersistentFlags().BoolVarP(&printCommandsFlag, "print-commands", "x", false, "Print commands that are executed")
+}
 
 func Execute(ctx context.Context) error {
 	return rootCmd.ExecuteContext(ctx)

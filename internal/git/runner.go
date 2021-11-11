@@ -7,8 +7,9 @@ import (
 )
 
 type Runner struct {
-	WorkDir string
-	Env     []string
+	WorkDir       string
+	Env           []string
+	PrintCommands bool
 }
 
 var _ Git = (*Runner)(nil)
@@ -29,7 +30,13 @@ func (r *Runner) Exec(args ...string) (Result, error) {
 		res.ExitCode = exitErr.ExitCode()
 	}
 
-	fmt.Fprintf(os.Stderr, "GIT: %v (%d) %v\n", c.Args, res.ExitCode, err)
+	if r.PrintCommands {
+		if err == nil {
+			fmt.Fprintf(os.Stderr, "[OK] %v\n", c.Args)
+		} else {
+			fmt.Fprintf(os.Stderr, "[ERR %d] %v: %v\n", res.ExitCode, c.Args, err)
+		}
+	}
 
 	return res, err
 }

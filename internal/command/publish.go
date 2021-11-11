@@ -1,7 +1,6 @@
 package command
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/spf13/cobra"
@@ -12,7 +11,6 @@ func init() {
 		Use:  "publish [<branch>...]",
 		Args: validBranchNames(stacker, 1, math.MaxInt),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("publish")
 			return stacker.Publish(cmd.Context(), args...)
 		},
 		DisableFlagsInUseLine: true,
