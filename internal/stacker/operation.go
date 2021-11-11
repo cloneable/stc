@@ -355,7 +355,7 @@ func (o *operation) configUnsetPattern(key, pattern string) {
 	if o == nil || o.err != nil {
 		return
 	}
-	_, err := o.git.Exec(
+	res, err := o.git.Exec(
 		"config",
 		"--local",
 		"--fixed-value",
@@ -363,7 +363,8 @@ func (o *operation) configUnsetPattern(key, pattern string) {
 		key,
 		pattern,
 	)
-	if err != nil {
+	// 5 means the nothing matched.
+	if err != nil && res.ExitCode != 5 {
 		o.err = fmt.Errorf("configUnsetPattern: %w", err)
 		return
 	}

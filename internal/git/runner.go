@@ -18,7 +18,6 @@ func (r *Runner) Exec(args ...string) (Result, error) {
 	res := Result{
 		Args: c.Args,
 	}
-	// TODO: filter env? HOME, PATH, SSH_AUTH_SOCK, GIT_*
 	c.Env = r.Env
 	c.Dir = r.WorkDir
 	c.Stdin = nil
@@ -28,11 +27,9 @@ func (r *Runner) Exec(args ...string) (Result, error) {
 	err := c.Run()
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		res.ExitCode = exitErr.ExitCode()
-	} else if err != nil {
-		return Result{}, err
 	}
 
-	fmt.Fprintf(os.Stderr, "GIT: %v (%d)\n", c.Args, res.ExitCode)
+	fmt.Fprintf(os.Stderr, "GIT: %v (%d) %v\n", c.Args, res.ExitCode, err)
 
-	return res, nil
+	return res, err
 }
