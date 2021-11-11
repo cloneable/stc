@@ -1,13 +1,14 @@
 package git
 
-type Git interface {
-	ParseBranchName(name string) (BranchName, error)
-	CurrentBranch() (BranchName, error)
-	CreateBranch(newBranch, baseBranch BranchName) error
-	SwitchBranch(branch BranchName) error
-	CreateSymref(name, target RefName, reason string) error
-	CreateRef(name RefName, commit Commit) error
-	GetRef(refName RefName) (Ref, error)
+import "bytes"
+
+type Result struct {
+	Args     []string
+	Stdout   bytes.Buffer
+	Stderr   bytes.Buffer
+	ExitCode int
 }
 
-type BranchName string
+type Git interface {
+	Exec(args ...string) (Result, error)
+}

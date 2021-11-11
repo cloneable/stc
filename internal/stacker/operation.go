@@ -1,7 +1,9 @@
 package stacker
 
 import (
+	"bufio"
 	"fmt"
+	"strings"
 
 	"github.com/cloneable/stacker/internal/git"
 )
@@ -53,13 +55,17 @@ func (o *operation) parseBranchName(name string) git.BranchName {
 	if o == nil || o.failed {
 		return ""
 	}
-	bname, err := o.git.ParseBranchName(name)
+	_, err := o.git.Exec(
+		"check-ref-format",
+		"--branch",
+		name,
+	)
 	if err != nil {
 		o.failed = true
-		o.err = fmt.Errorf("ParseBranchName: %w", err)
+		o.err = fmt.Errorf("parseBranchName: %w", err)
 		return ""
 	}
-	return bname
+	return git.BranchName(name)
 }
 
 // func (o *operation) readBranch(name string) *branch {
@@ -79,10 +85,14 @@ func (o *operation) createBranch(name git.BranchName, base *branch) *branch {
 	if o == nil || o.failed {
 		return nil
 	}
-	err := o.git.CreateBranch(name, base.branch)
+	_, err := o.git.Exec(
+		"branch",
+		string(name),
+		string(base.branch),
+	)
 	if err != nil {
 		o.failed = true
-		o.err = fmt.Errorf("CreateBranch: %w", err)
+		o.err = fmt.Errorf("createBranch: %w", err)
 		return nil
 	}
 	return &branch{
@@ -94,14 +104,17 @@ func (o *operation) currentBranch() *branch {
 	if o == nil || o.failed {
 		return nil
 	}
-	name, err := o.git.CurrentBranch()
+	res, err := o.git.Exec(
+		"branch",
+		"--show-current",
+	)
 	if err != nil {
 		o.failed = true
-		o.err = fmt.Errorf("CurrentBranch: %w", err)
+		o.err = fmt.Errorf("currentBranch: %w", err)
 		return nil
 	}
 	return &branch{
-		branch: name,
+		branch: git.BranchName(strings.TrimSpace(res.Stdout.String())),
 	}
 }
 
@@ -109,10 +122,14 @@ func (o *operation) switchBranch(b *branch) {
 	if o == nil || o.failed {
 		return
 	}
-	err := o.git.SwitchBranch(b.branch)
+	_, err := o.git.Exec(
+		"switch",
+		"--no-guess",
+		string(b.branch),
+	)
 	if err != nil {
 		o.failed = true
-		o.err = fmt.Errorf("SwitchBranch: %w", err)
+		o.err = fmt.Errorf("switchBranch: %w", err)
 		return
 	}
 }
@@ -121,10 +138,16 @@ func (o *operation) createSymref(branch, refBranch *branch, reason string) {
 	if o == nil || o.failed {
 		return
 	}
-	err := o.git.CreateSymref(branch.baseRefName(), refBranch.refName(), reason)
+	_, err := o.git.Exec(
+		"symbolic-ref",
+		"-m",
+		reason,
+		string(branch.baseRefName()),
+		string(refBranch.refName()),
+	)
 	if err != nil {
 		o.failed = true
-		o.err = fmt.Errorf("CreateSymref: %w", err)
+		o.err = fmt.Errorf("createSymref: %w", err)
 		return
 	}
 }
@@ -133,10 +156,16 @@ func (o *operation) createRef(branch *branch, commit git.Commit) {
 	if o == nil || o.failed {
 		return
 	}
-	err := o.git.CreateRef(branch.startRefName(), commit)
+	_, err := o.git.Exec(
+		"update-ref",
+		"--create-reflog",
+		string(branch.startRefName()),
+		string(commit),
+		strings.Repeat("0", 40),
+	)
 	if err != nil {
 		o.failed = true
-		o.err = fmt.Errorf("CreateRef: %w", err)
+		o.err = fmt.Errorf("createRef: %w", err)
 		return
 	}
 }
@@ -145,11 +174,169 @@ func (o *operation) getRef(branch *branch) git.Ref {
 	if o == nil || o.failed {
 		return git.Ref{}
 	}
-	ref, err := o.git.GetRef(branch.refName())
+	res, err := o.git.Exec(
+		"show-ref",
+		"--verify",
+		branch.refName().String(),
+	)
 	if err != nil {
 		o.failed = true
-		o.err = fmt.Errorf("GetRef: %w", err)
+		o.err = fmt.Errorf("getRef: %w", err)
+		return git.Ref{}
+	}
+	ref, err := git.ParseRef(strings.TrimSpace(res.Stdout.String()))
+	if err != nil {
+		o.failed = true
+		o.err = fmt.Errorf("ParseRef: %w", err)
 		return git.Ref{}
 	}
 	return ref
+}
+
+func (o *operation) updateRef(refName git.RefName, newCommit, oldCommit git.Commit) {
+	if o == nil || o.failed {
+		return
+	}
+	_, err := o.git.Exec(
+		"update-ref",
+		"--create-reflog",
+		string(refName),
+		string(newCommit),
+		string(oldCommit),
+	)
+	if err != nil {
+		o.failed = true
+		o.err = fmt.Errorf("updateRef: %w", err)
+		return
+	}
+}
+
+func (o *operation) deleteRef(refName git.RefName, oldCommit git.Commit) {
+	if o == nil || o.failed {
+		return
+	}
+	_, err := o.git.Exec(
+		"update-ref",
+		"-d",
+		string(refName),
+		string(oldCommit),
+	)
+	if err != nil {
+		o.failed = true
+		o.err = fmt.Errorf("deleteRef: %w", err)
+		return
+	}
+}
+
+func (o *operation) rebaseOnto(b *branch) {
+	if o == nil || o.failed {
+		return
+	}
+	_, err := o.git.Exec(
+		"rebase",
+		"--committer-date-is-author-date",
+		"--onto",
+		b.baseRefName().String(),
+		b.startRefName().String(),
+		b.refName().String(),
+	)
+	if err != nil {
+		o.failed = true
+		o.err = fmt.Errorf("rebaseOnto: %w", err)
+		return
+	}
+}
+
+func (o *operation) pushForce(b *branch) {
+	if o == nil || o.failed {
+		return
+	}
+	_, err := o.git.Exec(
+		"push",
+		"--force-with-lease",
+		// TODO: explicit parameters
+		// fmt.Sprintf("--force-with-lease=%s:%s", branchName, expectedCommit),
+		// fmt.Sprintf("refs/heads/%s:refs/remotes/%s/%s", branchName, remoteName, branchName),
+	)
+	if err != nil {
+		o.failed = true
+		o.err = fmt.Errorf("pushForce: %w", err)
+		return
+	}
+}
+
+// func (o *operation) pushUpstream(b *branch) {
+// 	if o == nil || o.failed {
+// 		return
+// 	}
+// 	_, err := o.git.Exec(
+// 		"push",
+// 		"--set-upstream",
+// 		remote,
+// 		string(remoteBranch),
+// 	)
+// 	if err != nil {
+// 		o.failed = true
+// 		o.err = fmt.Errorf("pushUpstream: %w", err)
+// 		return
+// 	}
+// }
+
+func (o *operation) listRefs() []git.Ref {
+	if o == nil || o.failed {
+		return nil
+	}
+	res, err := o.git.Exec(
+		"show-ref",
+	)
+	if err != nil {
+		o.failed = true
+		o.err = fmt.Errorf("rebaseOnto: %w", err)
+		return nil
+	}
+	var refs []git.Ref
+	scan := bufio.NewScanner(&res.Stdout)
+	for scan.Scan() {
+		ref, err := git.ParseRef(scan.Text())
+		if err != nil {
+			o.failed = true
+			o.err = fmt.Errorf("ParseRef: %w", err)
+			return nil
+		}
+		refs = append(refs, ref)
+	}
+	return refs
+}
+
+func (o *operation) configSet(key, value string) {
+	if o == nil || o.failed {
+		return
+	}
+	_, err := o.git.Exec(
+		"config",
+		key,
+		value,
+	)
+	if err != nil {
+		o.failed = true
+		o.err = fmt.Errorf("configAdd: %w", err)
+		return
+	}
+}
+
+func (o *operation) configAdd(key, value string) {
+	if o == nil || o.failed {
+		return
+	}
+	_, err := o.git.Exec(
+		"config",
+		"--add",
+		key,
+		value,
+	)
+	if err != nil {
+		o.failed = true
+		o.err = fmt.Errorf("configAdd: %w", err)
+		return
+	}
 }

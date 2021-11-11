@@ -31,3 +31,5 @@ type RemoteBranch struct {
 type Label struct {
 	ref Ref
 }
+
+type BranchName string
