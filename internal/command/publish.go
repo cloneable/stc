@@ -16,6 +16,7 @@ func init() {
 			return stacker.Publish(cmd.Context(), args...)
 		},
 		DisableFlagsInUseLine: true,
+		Hidden:                true, // TODO: unhide when ready
 	}
 	rootCmd.AddCommand(publishCmd)
 }

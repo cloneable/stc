@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 
 	stackerpkg "github.com/cloneable/stacker/internal/stacker"
@@ -42,7 +41,7 @@ var (
 	rootCmd = &cobra.Command{
 		Use: "stacker <command>",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Fprintln(os.Stderr, "validate stacker refs")
+			// TODO: do refs integrity checks
 			return nil
 		},
 		DisableFlagsInUseLine: true,

@@ -15,6 +15,7 @@ func init() {
 			return stacker.Delete(cmd.Context(), args[0])
 		},
 		DisableFlagsInUseLine: true,
+		Hidden:                true, // TODO: unhide when ready
 	}
 	rootCmd.AddCommand(deleteCmd)
 }

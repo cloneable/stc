@@ -15,6 +15,7 @@ func init() {
 			return stacker.Show(cmd.Context())
 		},
 		DisableFlagsInUseLine: true,
+		Hidden:                true, // TODO: unhide when ready
 	}
 	rootCmd.AddCommand(showCmd)
 }
