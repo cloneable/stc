@@ -11,7 +11,7 @@ type branch struct {
 }
 
 const (
-	stackerRefPrefix      = "refs/S/"
+	stackerRefPrefix      = "refs/stacker/"
 	stackerBaseRefPrefix  = stackerRefPrefix + "base/"
 	stackerStartRefPrefix = stackerRefPrefix + "start/"
 	branchRefPrefix       = "refs/heads/"
@@ -61,6 +61,19 @@ func (o *operation) parseBranchName(name string) git.BranchName {
 	}
 	return bname
 }
+
+// func (o *operation) readBranch(name string) *branch {
+// 	if o == nil || o.failed {
+// 		return nil
+// 	}
+// 	bname, err := o.git.ParseBranchName(name)
+// 	if err != nil {
+// 		o.failed = true
+// 		o.err = fmt.Errorf("ParseBranchName: %w", err)
+// 		return nil
+// 	}
+// 	return bname
+// }
 
 func (o *operation) createBranch(name git.BranchName, base *branch) *branch {
 	if o == nil || o.failed {

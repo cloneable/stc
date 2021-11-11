@@ -71,6 +71,26 @@ func (s *Stacker) Delete(ctx context.Context, branch string) error {
 }
 
 func (s *Stacker) Rebase(ctx context.Context, branches ...string) error {
+	// op := op(s.git)
+
+	// var bs []*branch
+	// if len(branches) == 0 {
+	// 	bs = append(bs, op.currentBranch())
+	// } else {
+	// 	for _, name := range branches {
+	// 		bs = append(bs, op.parseBranchName(name))
+	// 	}
+	// }
+
+	// baseB := op.currentBranch()
+	// newName := op.parseBranchName(name)
+	// newB := op.createBranch(newName, baseB)
+	// op.switchBranch(newB)
+	// op.createSymref(newB, baseB, "stacker: mark base branch")
+	// ref := op.getRef(baseB)
+	// op.createRef(newB, ref.Commit)
+	// return op.Err()
+
 	// TODO: if len(branch) == 0 use current head as branch (head must be branch head)
 	// TODO: for each branch
 	// TODO: ... determine list of all stacked branches
