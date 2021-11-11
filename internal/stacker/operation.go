@@ -206,6 +206,7 @@ func (o *operation) deleteRef(refName git.RefName, oldCommit git.Commit) {
 	}
 	_, err := o.git.Exec(
 		"update-ref",
+		"--no-deref",
 		"-d",
 		string(refName),
 		string(oldCommit),
@@ -267,6 +268,32 @@ func (o *operation) pushForce(b *branch) {
 // 	}
 // }
 
+func (o *operation) listStackerRefs() []git.Ref {
+	if o == nil || o.err != nil {
+		return nil
+	}
+	res, err := o.git.Exec(
+		"for-each-ref",
+		"--format=%(objectname) %(refname)",
+		stackerRefPrefix,
+	)
+	if err != nil {
+		o.err = fmt.Errorf("rebaseOnto: %w", err)
+		return nil
+	}
+	var refs []git.Ref
+	scan := bufio.NewScanner(&res.Stdout)
+	for scan.Scan() {
+		ref, err := git.ParseRef(scan.Text())
+		if err != nil {
+			o.err = fmt.Errorf("ParseRef: %w", err)
+			return nil
+		}
+		refs = append(refs, ref)
+	}
+	return refs
+}
+
 func (o *operation) listRefs() []git.Ref {
 	if o == nil || o.err != nil {
 		return nil
@@ -297,6 +324,7 @@ func (o *operation) configSet(key, value string) {
 	}
 	_, err := o.git.Exec(
 		"config",
+		"--local",
 		key,
 		value,
 	)
@@ -312,12 +340,31 @@ func (o *operation) configAdd(key, value string) {
 	}
 	_, err := o.git.Exec(
 		"config",
+		"--local",
 		"--add",
 		key,
 		value,
 	)
 	if err != nil {
 		o.err = fmt.Errorf("configAdd: %w", err)
+		return
+	}
+}
+
+func (o *operation) configUnsetPattern(key, pattern string) {
+	if o == nil || o.err != nil {
+		return
+	}
+	_, err := o.git.Exec(
+		"config",
+		"--local",
+		"--fixed-value",
+		"--unset-all",
+		key,
+		pattern,
+	)
+	if err != nil {
+		o.err = fmt.Errorf("configUnsetPattern: %w", err)
 		return
 	}
 }

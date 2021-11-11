@@ -7,8 +7,6 @@ import (
 	"github.com/cloneable/stacker/internal/git"
 )
 
-const RefNamespace = "stacker"
-
 var errUnimplemented = errors.New("unimplemented")
 
 type Stacker struct {
@@ -25,24 +23,34 @@ func New(repoPath string) *Stacker {
 }
 
 func (s *Stacker) Init(ctx context.Context, force bool) error {
+	op := op(s.git)
+	op.configAdd("transfer.hideRefs", stackerRefPrefix)
+	op.configAdd("log.excludeDecoration", stackerRefPrefix)
+
 	// TODO: read refs, branches, remotes
 	// TODO: validate stacker refs against branches
 	// TODO: determine list of needed refs
 	// TODO: print and create list of created refs
-	return errUnimplemented
-}
-
-func (s *Stacker) Show(ctx context.Context) error {
-	// TODO: list all stacker tracked branches with a status
-	return errUnimplemented
+	return op.Err()
 }
 
 func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) error {
+	op := op(s.git)
+	op.configUnsetPattern("transfer.hideRefs", stackerRefPrefix)
+	op.configUnsetPattern("log.excludeDecoration", stackerRefPrefix)
+	for _, ref := range op.listStackerRefs() {
+		op.deleteRef(ref.Name, ref.Commit)
+	}
 	// TODO: for each branch
 	// TODO: ... check if fully merged
 	// TODO: ... check if remote ref == local branch
 	// TODO: ... delete stacker refs
 	// TODO: ... or print warning
+	return op.Err()
+}
+
+func (s *Stacker) Show(ctx context.Context) error {
+	// TODO: list all stacker tracked branches with a status
 	return errUnimplemented
 }
 
