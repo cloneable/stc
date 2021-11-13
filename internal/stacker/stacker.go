@@ -25,8 +25,8 @@ func New(repoPath string) *Stacker {
 
 func (s *Stacker) Init(ctx context.Context, force bool) error {
 	op := op(s.git)
-	op.configAdd("transfer.hideRefs", stackerRefPrefix)
-	op.configAdd("log.excludeDecoration", stackerRefPrefix)
+	op.configAdd("transfer.hideRefs", git.StackerRefPrefix)
+	op.configAdd("log.excludeDecoration", git.StackerRefPrefix)
 
 	// TODO: read refs, branches, remotes
 	// TODO: validate stacker refs against branches
@@ -37,11 +37,11 @@ func (s *Stacker) Init(ctx context.Context, force bool) error {
 
 func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) error {
 	op := op(s.git)
-	op.configUnsetPattern("transfer.hideRefs", stackerRefPrefix)
-	op.configUnsetPattern("log.excludeDecoration", stackerRefPrefix)
-	for _, ref := range op.listStackerRefs() {
-		op.deleteRef(ref.Name(), ref.ObjectName())
-	}
+	op.configUnsetPattern("transfer.hideRefs", git.StackerRefPrefix)
+	op.configUnsetPattern("log.excludeDecoration", git.StackerRefPrefix)
+	// for _, ref := range op.listStackerRefs() {
+	// 	op.deleteRef(ref.Name(), ref.ObjectName())
+	// }
 	// TODO: for each branch
 	// TODO: ... check if fully merged
 	// TODO: ... check if remote ref == local branch
@@ -57,13 +57,14 @@ func (s *Stacker) Show(ctx context.Context) error {
 
 func (s *Stacker) Start(ctx context.Context, name string) error {
 	op := op(s.git)
-	baseB := op.currentBranch()
+	repo := op.snapshot()
+	baseB := repo.Head()
 	newName := op.parseBranchName(name)
-	newB := op.createBranch(newName, baseB)
-	op.switchBranch(newB)
-	op.createSymref(newB, baseB, "stacker: mark base branch")
-	ref := op.getRef(baseB)
-	op.createRef(newB, ref.ObjectName())
+	op.createBranch(newName, baseB)
+	op.switchBranch(newName)
+	op.createSymref(newName.StackerBaseRefName(), baseB.RefName(), "stacker: base branch marker")
+	baseRef := repo.LookupRef(baseB.RefName())
+	op.createRef(newName.StackerStartRefName(), baseRef.ObjectName())
 	return op.Err()
 }
 

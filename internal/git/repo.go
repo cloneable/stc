@@ -7,8 +7,29 @@ import (
 	"strings"
 )
 
+const (
+	StackerRefPrefix      = "refs/stacker/"
+	StackerBaseRefPrefix  = StackerRefPrefix + "base/"
+	StackerStartRefPrefix = StackerRefPrefix + "start/"
+	branchRefPrefix       = "refs/heads/"
+	tagRefPrefix          = "refs/tags/"
+)
+
 type Repository struct {
-	refs map[RefName]Ref
+	refs    map[RefName]Ref
+	head    BranchName
+	hasHead bool
+}
+
+func (r Repository) Head() BranchName           { return r.head }
+func (r Repository) LookupRef(name RefName) Ref { return r.refs[name] }
+func (r Repository) LookupBranch(name string) (BranchName, bool) {
+	n := BranchName(name)
+	_, ok := r.refs[n.RefName()]
+	if !ok {
+		return "", false
+	}
+	return n, true
 }
 
 type RefType int
@@ -65,9 +86,13 @@ func ParseRefName(name string) (RefName, error) {
 	return RefName(name), nil
 }
 
-func (rn RefName) String() string { return string(rn) }
+func (n RefName) String() string { return string(n) }
 
 type ObjectName string
+
+const NonExistantObject ObjectName = "0000000000000000000000000000000000000000"
+
+func (n ObjectName) String() string { return string(n) }
 
 type Ref struct {
 	name         RefName
@@ -96,8 +121,11 @@ func ParseRef(line string) (Ref, error) {
 
 type TagName string
 
-func (n TagName) RefName() RefName { return RefName("refs/tags/" + n) }
+func (n TagName) RefName() RefName { return RefName(tagRefPrefix + n) }
 
 type BranchName string
 
-func (n BranchName) RefName() RefName { return RefName("refs/heads/" + n) }
+func (n BranchName) String() string               { return string(n) }
+func (n BranchName) RefName() RefName             { return RefName(branchRefPrefix + n) }
+func (n BranchName) StackerBaseRefName() RefName  { return RefName(StackerBaseRefPrefix + n) }
+func (n BranchName) StackerStartRefName() RefName { return RefName(StackerStartRefPrefix + n) }

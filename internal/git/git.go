@@ -29,6 +29,8 @@ func SnapshotRepository(g Git) (Repository, error) {
 		return Repository{}, fmt.Errorf("cannot list refs: %w", err)
 	}
 	refs := make(map[RefName]Ref)
+	var hasHead bool
+	var head BranchName
 	scan := bufio.NewScanner(&res.Stdout)
 	for scan.Scan() {
 		var f fields
@@ -39,10 +41,22 @@ func SnapshotRepository(g Git) (Repository, error) {
 			return Repository{}, fmt.Errorf("fields validation failed: %w", err)
 		}
 		r := f.ref()
+		if r.head {
+			if hasHead {
+				return Repository{}, fmt.Errorf("found a second HEAD: %v and %v", head, r.name)
+			}
+			if !strings.HasPrefix(r.name.String(), branchRefPrefix) {
+				return Repository{}, fmt.Errorf("found a non-branch HEAD: %v", r.name)
+			}
+			hasHead = true
+			head = BranchName(strings.TrimPrefix(r.name.String(), branchRefPrefix))
+		}
 		refs[r.name] = r
 	}
 	return Repository{
-		refs: refs,
+		refs:    refs,
+		head:    head,
+		hasHead: hasHead,
 	}, nil
 }
 

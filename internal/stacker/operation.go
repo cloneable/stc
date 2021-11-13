@@ -1,35 +1,10 @@
 package stacker
 
 import (
-	"bufio"
 	"fmt"
-	"strings"
 
 	"github.com/cloneable/stacker/internal/git"
 )
-
-type branch struct {
-	branch git.BranchName
-}
-
-const (
-	stackerRefPrefix      = "refs/stacker/"
-	stackerBaseRefPrefix  = stackerRefPrefix + "base/"
-	stackerStartRefPrefix = stackerRefPrefix + "start/"
-	branchRefPrefix       = "refs/heads/"
-)
-
-func (b *branch) baseRefName() git.RefName {
-	return git.RefName(stackerBaseRefPrefix + b.branch)
-}
-
-func (b *branch) startRefName() git.RefName {
-	return git.RefName(stackerStartRefPrefix + b.branch)
-}
-
-func (b *branch) refName() git.RefName {
-	return git.RefName(branchRefPrefix + b.branch)
-}
 
 type operation struct {
 	git git.Git
@@ -50,6 +25,18 @@ func (o *operation) Err() error {
 	return nil
 }
 
+func (o *operation) snapshot() git.Repository {
+	if o == nil || o.err != nil {
+		return git.Repository{}
+	}
+	repo, err := git.SnapshotRepository(o.git)
+	if err != nil {
+		o.err = fmt.Errorf("snapshot: %w", err)
+		return git.Repository{}
+	}
+	return repo
+}
+
 func (o *operation) parseBranchName(name string) git.BranchName {
 	if o == nil || o.err != nil {
 		return ""
@@ -66,61 +53,30 @@ func (o *operation) parseBranchName(name string) git.BranchName {
 	return git.BranchName(name)
 }
 
-// func (o *operation) readBranch(name string) *branch {
-// 	if o == nil || o.err != nil  {
-// 		return nil
-// 	}
-// 	bname, err := o.git.ParseBranchName(name)
-// 	if err != nil {
-// 		o.err = fmt.Errorf("ParseBranchName: %w", err)
-// 		return nil
-// 	}
-// 	return bname
-// }
-
-func (o *operation) createBranch(name git.BranchName, base *branch) *branch {
+func (o *operation) createBranch(name, base git.BranchName) {
 	if o == nil || o.err != nil {
-		return nil
+		return
 	}
 	_, err := o.git.Exec(
 		"branch",
-		string(name),
-		string(base.branch),
+		"--create-reflog",
+		name.String(),
+		base.String(),
 	)
 	if err != nil {
 		o.err = fmt.Errorf("createBranch: %w", err)
-		return nil
-	}
-	return &branch{
-		branch: name,
+		return
 	}
 }
 
-func (o *operation) currentBranch() *branch {
-	if o == nil || o.err != nil {
-		return nil
-	}
-	res, err := o.git.Exec(
-		"branch",
-		"--show-current",
-	)
-	if err != nil {
-		o.err = fmt.Errorf("currentBranch: %w", err)
-		return nil
-	}
-	return &branch{
-		branch: git.BranchName(strings.TrimSpace(res.Stdout.String())),
-	}
-}
-
-func (o *operation) switchBranch(b *branch) {
+func (o *operation) switchBranch(b git.BranchName) {
 	if o == nil || o.err != nil {
 		return
 	}
 	_, err := o.git.Exec(
 		"switch",
 		"--no-guess",
-		string(b.branch),
+		b.String(),
 	)
 	if err != nil {
 		o.err = fmt.Errorf("switchBranch: %w", err)
@@ -128,7 +84,7 @@ func (o *operation) switchBranch(b *branch) {
 	}
 }
 
-func (o *operation) createSymref(branch, refBranch *branch, reason string) {
+func (o *operation) createSymref(name, target git.RefName, reason string) {
 	if o == nil || o.err != nil {
 		return
 	}
@@ -136,8 +92,8 @@ func (o *operation) createSymref(branch, refBranch *branch, reason string) {
 		"symbolic-ref",
 		"-m",
 		reason,
-		string(branch.baseRefName()),
-		string(refBranch.refName()),
+		name.String(),
+		target.String(),
 	)
 	if err != nil {
 		o.err = fmt.Errorf("createSymref: %w", err)
@@ -145,16 +101,16 @@ func (o *operation) createSymref(branch, refBranch *branch, reason string) {
 	}
 }
 
-func (o *operation) createRef(branch *branch, commit git.ObjectName) {
+func (o *operation) createRef(name git.RefName, commit git.ObjectName) {
 	if o == nil || o.err != nil {
 		return
 	}
 	_, err := o.git.Exec(
 		"update-ref",
 		"--create-reflog",
-		string(branch.startRefName()),
-		string(commit),
-		strings.Repeat("0", 40),
+		name.String(),
+		commit.String(),
+		git.NonExistantObject.String(),
 	)
 	if err != nil {
 		o.err = fmt.Errorf("createRef: %w", err)
@@ -162,37 +118,16 @@ func (o *operation) createRef(branch *branch, commit git.ObjectName) {
 	}
 }
 
-func (o *operation) getRef(branch *branch) git.Ref {
-	if o == nil || o.err != nil {
-		return git.Ref{}
-	}
-	res, err := o.git.Exec(
-		"show-ref",
-		"--verify",
-		branch.refName().String(),
-	)
-	if err != nil {
-		o.err = fmt.Errorf("getRef: %w", err)
-		return git.Ref{}
-	}
-	ref, err := git.ParseRef(strings.TrimSpace(res.Stdout.String()))
-	if err != nil {
-		o.err = fmt.Errorf("ParseRef: %w", err)
-		return git.Ref{}
-	}
-	return ref
-}
-
-func (o *operation) updateRef(refName git.RefName, newCommit, oldCommit git.ObjectName) {
+func (o *operation) updateRef(name git.RefName, newCommit, curCommit git.ObjectName) {
 	if o == nil || o.err != nil {
 		return
 	}
 	_, err := o.git.Exec(
 		"update-ref",
 		"--create-reflog",
-		string(refName),
-		string(newCommit),
-		string(oldCommit),
+		name.String(),
+		newCommit.String(),
+		curCommit.String(),
 	)
 	if err != nil {
 		o.err = fmt.Errorf("updateRef: %w", err)
@@ -200,7 +135,7 @@ func (o *operation) updateRef(refName git.RefName, newCommit, oldCommit git.Obje
 	}
 }
 
-func (o *operation) deleteRef(refName git.RefName, oldCommit git.ObjectName) {
+func (o *operation) deleteRef(name git.RefName, curCommit git.ObjectName) {
 	if o == nil || o.err != nil {
 		return
 	}
@@ -208,8 +143,8 @@ func (o *operation) deleteRef(refName git.RefName, oldCommit git.ObjectName) {
 		"update-ref",
 		"--no-deref",
 		"-d",
-		string(refName),
-		string(oldCommit),
+		name.String(),
+		curCommit.String(),
 	)
 	if err != nil {
 		o.err = fmt.Errorf("deleteRef: %w", err)
@@ -217,7 +152,7 @@ func (o *operation) deleteRef(refName git.RefName, oldCommit git.ObjectName) {
 	}
 }
 
-func (o *operation) rebaseOnto(b *branch) {
+func (o *operation) rebaseOnto(name git.BranchName) {
 	if o == nil || o.err != nil {
 		return
 	}
@@ -225,9 +160,9 @@ func (o *operation) rebaseOnto(b *branch) {
 		"rebase",
 		"--committer-date-is-author-date",
 		"--onto",
-		b.baseRefName().String(),
-		b.startRefName().String(),
-		b.refName().String(),
+		name.StackerBaseRefName().String(),
+		name.StackerStartRefName().String(),
+		name.String(),
 	)
 	if err != nil {
 		o.err = fmt.Errorf("rebaseOnto: %w", err)
@@ -235,7 +170,7 @@ func (o *operation) rebaseOnto(b *branch) {
 	}
 }
 
-func (o *operation) pushForce(b *branch) {
+func (o *operation) pushForce(b git.BranchName) {
 	if o == nil || o.err != nil {
 		return
 	}
@@ -252,7 +187,7 @@ func (o *operation) pushForce(b *branch) {
 	}
 }
 
-// func (o *operation) pushUpstream(b *branch) {
+// func (o *operation) pushUpstream(b git.BranchName) {
 // 	if o == nil || o.err != nil  {
 // 		return
 // 	}
@@ -267,56 +202,6 @@ func (o *operation) pushForce(b *branch) {
 // 		return
 // 	}
 // }
-
-func (o *operation) listStackerRefs() []git.Ref {
-	if o == nil || o.err != nil {
-		return nil
-	}
-	res, err := o.git.Exec(
-		"for-each-ref",
-		"--format=%(objectname) %(refname)",
-		stackerRefPrefix,
-	)
-	if err != nil {
-		o.err = fmt.Errorf("rebaseOnto: %w", err)
-		return nil
-	}
-	var refs []git.Ref
-	scan := bufio.NewScanner(&res.Stdout)
-	for scan.Scan() {
-		ref, err := git.ParseRef(scan.Text())
-		if err != nil {
-			o.err = fmt.Errorf("ParseRef: %w", err)
-			return nil
-		}
-		refs = append(refs, ref)
-	}
-	return refs
-}
-
-func (o *operation) listRefs() []git.Ref {
-	if o == nil || o.err != nil {
-		return nil
-	}
-	res, err := o.git.Exec(
-		"show-ref",
-	)
-	if err != nil {
-		o.err = fmt.Errorf("rebaseOnto: %w", err)
-		return nil
-	}
-	var refs []git.Ref
-	scan := bufio.NewScanner(&res.Stdout)
-	for scan.Scan() {
-		ref, err := git.ParseRef(scan.Text())
-		if err != nil {
-			o.err = fmt.Errorf("ParseRef: %w", err)
-			return nil
-		}
-		refs = append(refs, ref)
-	}
-	return refs
-}
 
 func (o *operation) configSet(key, value string) {
 	if o == nil || o.err != nil {
