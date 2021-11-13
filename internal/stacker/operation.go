@@ -20,6 +20,7 @@ func op(git git.Git) *operation {
 
 func (o *operation) Err() error {
 	if o != nil {
+		o.git.DumpOutput()
 		return o.err
 	}
 	return nil

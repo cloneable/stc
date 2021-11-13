@@ -22,6 +22,8 @@ func (g *fakeGit) Exec(args ...string) (Result, error) {
 	}, g.err
 }
 
+func (g *fakeGit) DumpOutput() {}
+
 func TestSnapshotRepository(t *testing.T) {
 	t.Parallel()
 

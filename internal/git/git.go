@@ -18,6 +18,7 @@ type Result struct {
 
 type Git interface {
 	Exec(args ...string) (Result, error)
+	DumpOutput()
 }
 
 func SnapshotRepository(g Git) (Repository, error) {
