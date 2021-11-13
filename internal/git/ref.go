@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+type Repository struct {
+	refs []Ref
+}
+
 type RefName string
 
 func ParseRefName(name string) (RefName, error) {
@@ -17,14 +21,20 @@ func ParseRefName(name string) (RefName, error) {
 
 func (rn RefName) String() string { return string(rn) }
 
-type Commit string
+type ObjectName string
 
-func (c Commit) String() string { return string(c) }
+func (c ObjectName) String() string { return string(c) }
 
 type Ref struct {
-	Name   RefName
-	Commit Commit
+	name         RefName
+	objectName   ObjectName
+	head         bool
+	symRefTarget RefName
 }
+
+func (r Ref) Name() RefName          { return r.name }
+func (r Ref) ObjectName() ObjectName { return r.objectName }
+func (r Ref) SymRefTarget() RefName  { return r.symRefTarget }
 
 var refLineRE = regexp.MustCompile("^([0-9a-f]{40}) (refs/.*)$")
 
@@ -34,7 +44,7 @@ func ParseRef(line string) (Ref, error) {
 		return Ref{}, fmt.Errorf("invalid line: %q", line)
 	}
 	return Ref{
-		Name:   RefName(groups[2]),
-		Commit: Commit(groups[1]),
+		name:       RefName(groups[2]),
+		objectName: ObjectName(groups[1]),
 	}, nil
 }

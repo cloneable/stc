@@ -145,7 +145,7 @@ func (o *operation) createSymref(branch, refBranch *branch, reason string) {
 	}
 }
 
-func (o *operation) createRef(branch *branch, commit git.Commit) {
+func (o *operation) createRef(branch *branch, commit git.ObjectName) {
 	if o == nil || o.err != nil {
 		return
 	}
@@ -183,7 +183,7 @@ func (o *operation) getRef(branch *branch) git.Ref {
 	return ref
 }
 
-func (o *operation) updateRef(refName git.RefName, newCommit, oldCommit git.Commit) {
+func (o *operation) updateRef(refName git.RefName, newCommit, oldCommit git.ObjectName) {
 	if o == nil || o.err != nil {
 		return
 	}
@@ -200,7 +200,7 @@ func (o *operation) updateRef(refName git.RefName, newCommit, oldCommit git.Comm
 	}
 }
 
-func (o *operation) deleteRef(refName git.RefName, oldCommit git.Commit) {
+func (o *operation) deleteRef(refName git.RefName, oldCommit git.ObjectName) {
 	if o == nil || o.err != nil {
 		return
 	}

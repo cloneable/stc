@@ -40,7 +40,7 @@ func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) err
 	op.configUnsetPattern("transfer.hideRefs", stackerRefPrefix)
 	op.configUnsetPattern("log.excludeDecoration", stackerRefPrefix)
 	for _, ref := range op.listStackerRefs() {
-		op.deleteRef(ref.Name, ref.Commit)
+		op.deleteRef(ref.Name(), ref.ObjectName())
 	}
 	// TODO: for each branch
 	// TODO: ... check if fully merged
@@ -63,7 +63,7 @@ func (s *Stacker) Start(ctx context.Context, name string) error {
 	op.switchBranch(newB)
 	op.createSymref(newB, baseB, "stacker: mark base branch")
 	ref := op.getRef(baseB)
-	op.createRef(newB, ref.Commit)
+	op.createRef(newB, ref.ObjectName())
 	return op.Err()
 }
 
