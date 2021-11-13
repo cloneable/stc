@@ -1,6 +1,7 @@
 package git
 
 import (
+	"encoding"
 	"fmt"
 	"regexp"
 	"strings"
@@ -8,6 +9,51 @@ import (
 
 type Repository struct {
 	refs []Ref
+}
+
+type RefType int
+
+const (
+	_ RefType = iota
+
+	TypeCommit
+	TypeTree
+	TypeBlob
+	TypeTag
+)
+
+var _ (encoding.TextUnmarshaler) = (*RefType)(nil)
+var _ (encoding.TextMarshaler) = (*RefType)(nil)
+
+func (t *RefType) UnmarshalText(text []byte) error {
+	switch string(text) {
+	case "commit":
+		*t = TypeCommit
+	case "tree":
+		*t = TypeTree
+	case "blob":
+		*t = TypeBlob
+	case "tag":
+		*t = TypeTag
+	default:
+		return fmt.Errorf("unknown ref type: %s", text)
+	}
+	return nil
+}
+
+func (t RefType) MarshalText() ([]byte, error) {
+	switch t {
+	case TypeCommit:
+		return []byte("commit"), nil
+	case TypeTree:
+		return []byte("tree"), nil
+	case TypeBlob:
+		return []byte("blob"), nil
+	case TypeTag:
+		return []byte("tag"), nil
+	default:
+		return nil, fmt.Errorf("unknown ref type: %d", t)
+	}
 }
 
 type RefName string
@@ -27,6 +73,7 @@ func (c ObjectName) String() string { return string(c) }
 
 type Ref struct {
 	name         RefName
+	typ          RefType
 	objectName   ObjectName
 	head         bool
 	symRefTarget RefName

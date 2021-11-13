@@ -30,7 +30,7 @@ func TestSnapshotRepository(t *testing.T) {
 			Head:       true,
 			ObjectName: "dabfcd577644ee74ad10e150720c29130e8dc5ea",
 			RefName:    "refs/heads/main",
-			ObjectType: "commit",
+			ObjectType: TypeCommit,
 			Track:      "=",
 			Remote:     "origin",
 			RemoteRef:  "refs/heads/main",

@@ -76,14 +76,14 @@ func (s forEachRefSpec) formatFlagValue() string {
 }
 
 type fields struct {
-	Head       bool   `json:"head"`
-	ObjectName string `json:"objectname"`
-	RefName    string `json:"refname"`
-	ObjectType string `json:"objecttype"`
-	Track      string `json:"track"`
-	Remote     string `json:"remote"`
-	RemoteRef  string `json:"remoteref"`
-	SymRef     string `json:"symref"`
+	Head       bool    `json:"head"`
+	ObjectName string  `json:"objectname"`
+	RefName    string  `json:"refname"`
+	ObjectType RefType `json:"objecttype"`
+	Track      string  `json:"track"`
+	Remote     string  `json:"remote"`
+	RemoteRef  string  `json:"remoteref"`
+	SymRef     string  `json:"symref"`
 }
 
 func (f fields) String() string {
@@ -149,6 +149,9 @@ func (s forEachRefSpec) validate(name, value string) error {
 }
 
 func (f fields) validate() error {
+	// if err := formatFields.validate("head", f.Head); err != nil {
+	// 	return err
+	// }
 	if err := formatFields.validate("objectname", f.ObjectName); err != nil {
 		return err
 	}
@@ -158,9 +161,9 @@ func (f fields) validate() error {
 	if err := formatFields.validate("refname", f.RefName); err != nil {
 		return err
 	}
-	if err := formatFields.validate("objecttype", f.ObjectType); err != nil {
-		return err
-	}
+	// if err := formatFields.validate("objecttype", f.ObjectType); err != nil {
+	// 	return err
+	// }
 	if err := formatFields.validate("track", f.Track); err != nil {
 		return err
 	}
