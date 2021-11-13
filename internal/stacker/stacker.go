@@ -81,25 +81,16 @@ func (s *Stacker) Delete(ctx context.Context, branch string) error {
 }
 
 func (s *Stacker) Rebase(ctx context.Context, branches ...string) error {
-	// op := op(s.git)
+	op := op(s.git)
 
-	// var bs []*branch
-	// if len(branches) == 0 {
-	// 	bs = append(bs, op.currentBranch())
-	// } else {
-	// 	for _, name := range branches {
-	// 		bs = append(bs, op.parseBranchName(name))
-	// 	}
-	// }
+	// TODO: branches
 
-	// baseB := op.currentBranch()
-	// newName := op.parseBranchName(name)
-	// newB := op.createBranch(newName, baseB)
-	// op.switchBranch(newB)
-	// op.createSymref(newB, baseB, "stacker: mark base branch")
-	// ref := op.getRef(baseB)
-	// op.createRef(newB, ref.Commit)
-	// return op.Err()
+	repo := op.snapshot()
+	branch := repo.Head()
+	baseRef := repo.LookupRef(branch.StackerBaseRefName())
+	startRef := repo.LookupRef(branch.StackerStartRefName())
+	op.rebaseOnto(branch)
+	op.updateRef(branch.StackerStartRefName(), baseRef.ObjectName(), startRef.ObjectName())
 
 	// TODO: if len(branch) == 0 use current head as branch (head must be branch head)
 	// TODO: for each branch
@@ -109,7 +100,7 @@ func (s *Stacker) Rebase(ctx context.Context, branches ...string) error {
 	// TODO: for each selected branch
 	// TODO: ... call git rebase --onto
 	// TODO: ... update stacker ref
-	return errUnimplemented
+	return op.Err()
 }
 
 func (s *Stacker) Sync(ctx context.Context, branches ...string) error {
