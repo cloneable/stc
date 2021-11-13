@@ -28,7 +28,7 @@ func SnapshotRepository(g Git) (Repository, error) {
 	if err != nil {
 		return Repository{}, fmt.Errorf("cannot list refs: %w", err)
 	}
-	var refs []Ref
+	refs := make(map[RefName]Ref)
 	scan := bufio.NewScanner(&res.Stdout)
 	for scan.Scan() {
 		var f fields
@@ -38,7 +38,8 @@ func SnapshotRepository(g Git) (Repository, error) {
 		if err := f.validate(); err != nil {
 			return Repository{}, fmt.Errorf("fields validation failed: %w", err)
 		}
-		refs = append(refs, f.ref())
+		r := f.ref()
+		refs[r.name] = r
 	}
 	return Repository{
 		refs: refs,

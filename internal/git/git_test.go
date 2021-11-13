@@ -42,8 +42,8 @@ func TestSnapshotRepository(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertRepository(t, repo, Repository{
-		refs: []Ref{
-			{
+		refs: map[RefName]Ref{
+			"refs/heads/main": {
 				name:         "refs/heads/main",
 				objectName:   "dabfcd577644ee74ad10e150720c29130e8dc5ea",
 				head:         true,
@@ -59,10 +59,10 @@ func assertRepository(t *testing.T, actual, expected Repository) {
 		t.Errorf(`len(refs) = %d, want %d`, got, want)
 		return
 	}
-	for i := range expected.refs {
-		t.Run(fmt.Sprintf("ref#%d", i), func(t *testing.T) {
+	for name := range expected.refs {
+		t.Run(fmt.Sprintf("ref: %q", name), func(t *testing.T) {
 			t.Helper()
-			assertRef(t, actual.refs[i], expected.refs[i])
+			assertRef(t, actual.refs[name], expected.refs[name])
 		})
 	}
 }
