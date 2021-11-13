@@ -28,12 +28,7 @@ func (r *Runner) Exec(args ...string) (Result, error) {
 	c.Stdout = teeWriter{&res.Stdout, r.output.stdout()}
 	c.Stderr = teeWriter{&res.Stderr, r.output.stderr()}
 
-	cmdOut := r.output.stderr()
-	if r.PrintCommands {
-		cmdOut = teeWriter{os.Stderr, r.output.stdout()}
-	}
-
-	fmt.Fprintf(cmdOut, "### %s\n", c.Args)
+	fmt.Fprintf(r.output.stderr(), "### %s\n", c.Args)
 
 	err := c.Run()
 	if exitErr, ok := err.(*exec.ExitError); ok {
@@ -41,9 +36,11 @@ func (r *Runner) Exec(args ...string) (Result, error) {
 	}
 
 	if err == nil {
-		fmt.Fprintf(cmdOut, "### [OK]\n")
+		fmt.Fprintf(os.Stderr, "[OK] %s\n", c.Args)
+		fmt.Fprintf(r.output.stderr(), "### [OK]\n")
 	} else {
-		fmt.Fprintf(cmdOut, "### [err %d]: %v\n", res.ExitCode, err)
+		fmt.Fprintf(os.Stderr, "[err %d] %s: %v\n", res.ExitCode, c.Args, err)
+		fmt.Fprintf(r.output.stderr(), "### [err %d]: %v\n", res.ExitCode, err)
 	}
 
 	return res, err
@@ -72,11 +69,13 @@ type output struct {
 	writes []write
 }
 
-func (o *output) appendWrite(w write) (n int, err error) {
+func (o *output) appendWrite(tag int, buf []byte) (n int, err error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	o.writes = append(o.writes, w)
-	return len(w.data), nil
+	data := make([]byte, len(buf))
+	copy(data, buf)
+	o.writes = append(o.writes, write{tag: tag, data: data})
+	return len(data), nil
 }
 
 type write struct {
@@ -86,17 +85,13 @@ type write struct {
 
 func (o *output) stdout() io.Writer {
 	return writerFunc(func(p []byte) (n int, err error) {
-		buf := make([]byte, len(p))
-		copy(buf, p)
-		return o.appendWrite(write{tag: 0, data: p})
+		return o.appendWrite(1, p)
 	})
 }
 
 func (o *output) stderr() io.Writer {
 	return writerFunc(func(p []byte) (n int, err error) {
-		buf := make([]byte, len(p))
-		copy(buf, p)
-		return o.appendWrite(write{tag: 1, data: buf})
+		return o.appendWrite(2, p)
 	})
 }
 
@@ -105,9 +100,9 @@ func (o *output) dump() {
 	defer o.mu.Unlock()
 	for _, w := range o.writes {
 		switch w.tag {
-		case 0:
-			os.Stdout.Write(w.data)
 		case 1:
+			os.Stdout.Write(w.data)
+		case 2:
 			os.Stderr.Write(w.data)
 		}
 	}

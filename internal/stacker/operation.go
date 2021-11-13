@@ -19,7 +19,7 @@ func op(git git.Git) *operation {
 }
 
 func (o *operation) Err() error {
-	if o != nil {
+	if o != nil && o.err != nil {
 		o.git.DumpOutput()
 		return o.err
 	}
