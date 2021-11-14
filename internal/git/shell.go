@@ -18,14 +18,14 @@ func shellQuote(s string) string {
 		buf.WriteByte('"')
 		for _, b := range []byte(s) {
 			switch {
-			case charBits[b]&bitEscape != 0:
-				buf.WriteByte('\\')
-				buf.WriteByte('c')
-			case b < 0x20 || b > 0x7F:
+			case b < 0x20 || b >= 0x7F:
 				buf.WriteByte('\\')
 				buf.WriteByte('x')
 				buf.WriteByte(hexChars[(b>>4)&0xF])
 				buf.WriteByte(hexChars[b&0xF])
+			case charBits[b]&bitEscape != 0:
+				buf.WriteByte('\\')
+				buf.WriteByte(b)
 			default:
 				buf.WriteByte(b)
 			}
