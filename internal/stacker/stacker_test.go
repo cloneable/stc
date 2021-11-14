@@ -3,9 +3,9 @@ package stacker
 import (
 	"bytes"
 	"context"
-	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -78,46 +78,65 @@ func cmd(t *testing.T, dir, name string, args ...string) {
 	}
 }
 
-func copyFile(t *testing.T, src, dst string) {
+func writeFile(t *testing.T, workDir, filePath, content string) {
 	t.Helper()
-
-	srcFile, err := os.Open(src)
-	if err != nil {
-		t.Fatalf("cannot open src file: %v", err)
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		t.Fatalf("cannot create dst file: %v", err)
-	}
-	defer dstFile.Close()
-
-	_, err = io.Copy(dstFile, srcFile)
-	if err != nil {
-		t.Fatalf("cannot copy file: %v", err)
+	if err := os.WriteFile(path.Join(workDir, filePath), []byte(content), 0o600); err != nil {
+		t.Fatalf("cannot write file %s: %v", filePath, err)
 	}
 }
 
-func TestInit(t *testing.T) {
+func readFile(t *testing.T, workDir, filePath string) string {
+	t.Helper()
+	data, err := os.ReadFile(path.Join(workDir, filePath))
+	if err != nil {
+		t.Fatalf("cannot read file %s: %v", filePath, err)
+	}
+	return string(data)
+}
+
+type fileState struct {
+	exists  bool
+	content string
+}
+
+func assertFiles(t *testing.T, workDir string, files map[string]fileState) {
+	t.Helper()
+	for filePath, want := range files {
+		fullPath := path.Join(workDir, filePath)
+		_, err := os.Stat(fullPath)
+		gotExists := true
+		var gotContent string
+		if err != nil {
+			if !os.IsNotExist(err) {
+				t.Fatalf("os.IsNotExist(%q): unexpected error: %v", fullPath, err)
+			}
+			gotExists = false
+		} else {
+			gotContent = readFile(t, workDir, filePath)
+		}
+		if gotExists != want.exists {
+			t.Errorf("%s: exists = %t, want %t", filePath, gotExists, want.exists)
+		}
+		if gotContent != want.content {
+			t.Errorf("%s: content = %q, want %q", filePath, gotContent, want.content)
+		}
+	}
+}
+
+func TestStackerStart(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	gitDir := newRepo(t)
+	workDir := newRepo(t)
 
-	os.WriteFile(gitDir+"/main.txt", []byte("0\n"), 0o600)
-	cmd(t, gitDir, "git", "add", "main.txt")
-	cmd(t, gitDir, "git", "commit", "-m", "main: state 0")
-	cmd(t, gitDir, "git", "push", "-u", "origin")
-
-	os.WriteFile(gitDir+"/main.txt", []byte("1\n"), 0o600)
-	cmd(t, gitDir, "git", "add", "main.txt")
-	cmd(t, gitDir, "git", "commit", "-m", "main: state 1")
-	cmd(t, gitDir, "git", "push", "-u", "origin")
+	writeFile(t, workDir, "main.txt", "0\n")
+	cmd(t, workDir, "git", "add", "main.txt")
+	cmd(t, workDir, "git", "commit", "-m", "main: state 0")
+	cmd(t, workDir, "git", "push")
 
 	stkr := Stacker{
 		git: &git.Runner{
-			WorkDir: gitDir,
+			WorkDir: workDir,
 			Env:     cmdEnv,
 		},
 	}
@@ -125,8 +144,54 @@ func TestInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.WriteFile(gitDir+"/test-branch-1.txt", []byte("0\n"), 0o600)
-	cmd(t, gitDir, "git", "add", "test-branch-1.txt")
-	cmd(t, gitDir, "git", "commit", "-m", "test-branch-1: state 0")
-	cmd(t, gitDir, "git", "push", "-u", "origin", "test-branch-1")
+	baseCommit := readFile(t, workDir, ".git/refs/heads/main")
+
+	assertFiles(t, workDir, map[string]fileState{
+		".git/HEAD":                              {exists: true, content: "ref: refs/heads/test-branch-1\n"},
+		".git/refs/heads/main":                   {exists: true, content: "2dcf4e535d10575b237f8fe0c7be220928d1ae6f\n"},
+		".git/refs/heads/test-branch-1":          {exists: true, content: "2dcf4e535d10575b237f8fe0c7be220928d1ae6f\n"},
+		".git/refs/stacker/base/test-branch-1":   {exists: true, content: "ref: refs/heads/main\n"},
+		".git/refs/stacker/start/test-branch-1":  {exists: true, content: baseCommit},
+		".git/refs/stacker/remote/test-branch-1": {},
+	})
+}
+
+func TestStackerPush(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	workDir := newRepo(t)
+
+	writeFile(t, workDir, "main.txt", "0\n")
+	cmd(t, workDir, "git", "add", "main.txt")
+	cmd(t, workDir, "git", "commit", "-m", "main: state 0")
+	cmd(t, workDir, "git", "push")
+
+	stkr := Stacker{
+		git: &git.Runner{
+			WorkDir: workDir,
+			Env:     cmdEnv,
+		},
+	}
+
+	if err := stkr.Start(ctx, "test-branch-2"); err != nil {
+		t.Fatal(err)
+	}
+
+	writeFile(t, workDir, "test-branch-2.txt", "0\n")
+	cmd(t, workDir, "git", "add", "test-branch-2.txt")
+	cmd(t, workDir, "git", "commit", "-m", "test-branch-2: state 0")
+
+	if err := stkr.Push(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	assertFiles(t, workDir, map[string]fileState{
+		".git/HEAD":                              {exists: true, content: "ref: refs/heads/test-branch-2\n"},
+		".git/refs/heads/main":                   {exists: true, content: "2dcf4e535d10575b237f8fe0c7be220928d1ae6f\n"},
+		".git/refs/heads/test-branch-2":          {exists: true, content: "cb53d6cb3801cd371346e474e7d4c6d79d6dd56c\n"},
+		".git/refs/stacker/base/test-branch-2":   {exists: true, content: "ref: refs/heads/main\n"},
+		".git/refs/stacker/start/test-branch-2":  {exists: true, content: "2dcf4e535d10575b237f8fe0c7be220928d1ae6f\n"},
+		".git/refs/stacker/remote/test-branch-2": {exists: true, content: "cb53d6cb3801cd371346e474e7d4c6d79d6dd56c\n"},
+	})
 }
