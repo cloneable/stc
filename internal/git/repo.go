@@ -101,12 +101,16 @@ type Ref struct {
 	head         bool
 	symRefTarget RefName
 	remote       RemoteName
+	remoteRef    RefName
+	upstreamRef  RefName
 }
 
 func (r Ref) Name() RefName          { return r.name }
 func (r Ref) ObjectName() ObjectName { return r.objectName }
 func (r Ref) SymRefTarget() RefName  { return r.symRefTarget }
 func (r Ref) Remote() RemoteName     { return r.remote }
+func (r Ref) RemoteRefName() RefName { return r.remoteRef }
+func (r Ref) UpstreamRef() RefName   { return r.upstreamRef }
 
 var refLineRE = regexp.MustCompile("^([0-9a-f]{40}) (refs/.*)$")
 

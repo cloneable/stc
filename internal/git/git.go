@@ -101,6 +101,7 @@ type fields struct {
 	Remote     string  `json:"remote"`
 	RemoteRef  string  `json:"remoteref"`
 	SymRef     string  `json:"symref"`
+	Upstream   string  `json:"upstream"`
 }
 
 func (f fields) String() string {
@@ -147,6 +148,10 @@ var formatFields = forEachRefSpec{
 		`"%(symref)"`,
 		regexp.MustCompile("^(?:|refs/.+)$"),
 	},
+	"upstream": {
+		`"%(upstream)"`,
+		regexp.MustCompile("^(?:|refs/remotes/.+)$"),
+	},
 }
 
 func (f fields) ref() Ref {
@@ -156,6 +161,7 @@ func (f fields) ref() Ref {
 		head:         f.Head,
 		symRefTarget: RefName(f.SymRef),
 		remote:       RemoteName(f.Remote),
+		upstreamRef:  RefName(f.Upstream),
 	}
 }
 
@@ -192,6 +198,9 @@ func (f fields) validate() error {
 		return err
 	}
 	if err := formatFields.validate("symref", f.SymRef); err != nil {
+		return err
+	}
+	if err := formatFields.validate("upstream", f.Upstream); err != nil {
 		return err
 	}
 	return nil
