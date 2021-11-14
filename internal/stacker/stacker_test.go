@@ -208,3 +208,62 @@ func TestStackerPush(t *testing.T) {
 		".git/refs/stacker/remote/test-branch-2": file(branchCommit),
 	})
 }
+
+func TestStackerRebase(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	workDir := newRepo(t)
+
+	writeFile(t, workDir, "main.txt", "0\n")
+	cmd(t, workDir, "git", "add", "main.txt")
+	cmd(t, workDir, "git", "commit", "-m", "main: state 0")
+	cmd(t, workDir, "git", "push")
+
+	stkr := Stacker{
+		git: &git.Runner{
+			WorkDir: workDir,
+			Env:     cmdEnv,
+		},
+	}
+
+	if err := stkr.Start(ctx, "test-branch"); err != nil {
+		t.Fatal(err)
+	}
+
+	forkCommit := readFile(t, workDir, ".git/refs/heads/main")
+
+	writeFile(t, workDir, "test-branch.txt", "0\n")
+	cmd(t, workDir, "git", "add", "test-branch.txt")
+	cmd(t, workDir, "git", "commit", "-m", "test-branch: state 0")
+
+	writeFile(t, workDir, "test-branch.txt", "1\n")
+	cmd(t, workDir, "git", "add", "test-branch.txt")
+	cmd(t, workDir, "git", "commit", "-m", "test-branch: state 1")
+
+	cmd(t, workDir, "git", "checkout", "main")
+
+	writeFile(t, workDir, "main.txt", "1\n")
+	cmd(t, workDir, "git", "add", "main.txt")
+	cmd(t, workDir, "git", "commit", "-m", "main: state 1")
+
+	baseCommit := readFile(t, workDir, ".git/refs/heads/main")
+
+	cmd(t, workDir, "git", "checkout", "test-branch")
+
+	assertFiles(t, workDir, map[string]*fileState{
+		".git/HEAD":                           file("ref: refs/heads/test-branch\n"),
+		".git/refs/stacker/base/test-branch":  file("ref: refs/heads/main\n"),
+		".git/refs/stacker/start/test-branch": file(forkCommit),
+	})
+
+	if err := stkr.Rebase(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	assertFiles(t, workDir, map[string]*fileState{
+		".git/HEAD":                           file("ref: refs/heads/test-branch\n"),
+		".git/refs/stacker/base/test-branch":  file("ref: refs/heads/main\n"),
+		".git/refs/stacker/start/test-branch": file(baseCommit),
+	})
+}
