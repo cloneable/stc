@@ -94,14 +94,20 @@ func readFile(t *testing.T, workDir, filePath string) string {
 	return string(data)
 }
 
-type fileState struct {
-	exists  bool
-	content string
+type fileState string
+
+func file(s string) *fileState    { f := fileState(s); return &f }
+func (f *fileState) Exists() bool { return f != nil }
+func (f *fileState) Content() string {
+	if f == nil {
+		return ""
+	}
+	return string(*f)
 }
 
-func assertFiles(t *testing.T, workDir string, files map[string]fileState) {
+func assertFiles(t *testing.T, workDir string, files map[string]*fileState) {
 	t.Helper()
-	for filePath, want := range files {
+	for filePath, wantFile := range files {
 		fullPath := path.Join(workDir, filePath)
 		_, err := os.Stat(fullPath)
 		gotExists := true
@@ -114,11 +120,11 @@ func assertFiles(t *testing.T, workDir string, files map[string]fileState) {
 		} else {
 			gotContent = readFile(t, workDir, filePath)
 		}
-		if gotExists != want.exists {
-			t.Errorf("%s: exists = %t, want %t", filePath, gotExists, want.exists)
+		if got, want := gotExists, wantFile.Exists(); got != want {
+			t.Errorf("%s: exists = %t, want %t", filePath, got, want)
 		}
-		if gotContent != want.content {
-			t.Errorf("%s: content = %q, want %q", filePath, gotContent, want.content)
+		if got, want := gotContent, wantFile.Content(); got != want {
+			t.Errorf("%s: content = %q, want %q", filePath, gotContent, want)
 		}
 	}
 }
@@ -146,13 +152,12 @@ func TestStackerStart(t *testing.T) {
 
 	baseCommit := readFile(t, workDir, ".git/refs/heads/main")
 
-	assertFiles(t, workDir, map[string]fileState{
-		".git/HEAD":                              {exists: true, content: "ref: refs/heads/test-branch-1\n"},
-		".git/refs/heads/main":                   {exists: true, content: "2dcf4e535d10575b237f8fe0c7be220928d1ae6f\n"},
-		".git/refs/heads/test-branch-1":          {exists: true, content: "2dcf4e535d10575b237f8fe0c7be220928d1ae6f\n"},
-		".git/refs/stacker/base/test-branch-1":   {exists: true, content: "ref: refs/heads/main\n"},
-		".git/refs/stacker/start/test-branch-1":  {exists: true, content: baseCommit},
-		".git/refs/stacker/remote/test-branch-1": {},
+	assertFiles(t, workDir, map[string]*fileState{
+		".git/HEAD":                              file("ref: refs/heads/test-branch-1\n"),
+		".git/refs/heads/test-branch-1":          file(baseCommit),
+		".git/refs/stacker/base/test-branch-1":   file("ref: refs/heads/main\n"),
+		".git/refs/stacker/start/test-branch-1":  file(baseCommit),
+		".git/refs/stacker/remote/test-branch-1": nil,
 	})
 }
 
@@ -182,16 +187,24 @@ func TestStackerPush(t *testing.T) {
 	cmd(t, workDir, "git", "add", "test-branch-2.txt")
 	cmd(t, workDir, "git", "commit", "-m", "test-branch-2: state 0")
 
+	branchCommit := readFile(t, workDir, ".git/refs/heads/test-branch-2")
+
+	assertFiles(t, workDir, map[string]*fileState{
+		".git/refs/remotes/origin/test-branch-2": nil,
+		".git/refs/stacker/remote/test-branch-2": nil,
+	})
+
 	if err := stkr.Push(ctx); err != nil {
 		t.Fatal(err)
 	}
 
-	assertFiles(t, workDir, map[string]fileState{
-		".git/HEAD":                              {exists: true, content: "ref: refs/heads/test-branch-2\n"},
-		".git/refs/heads/main":                   {exists: true, content: "2dcf4e535d10575b237f8fe0c7be220928d1ae6f\n"},
-		".git/refs/heads/test-branch-2":          {exists: true, content: "cb53d6cb3801cd371346e474e7d4c6d79d6dd56c\n"},
-		".git/refs/stacker/base/test-branch-2":   {exists: true, content: "ref: refs/heads/main\n"},
-		".git/refs/stacker/start/test-branch-2":  {exists: true, content: "2dcf4e535d10575b237f8fe0c7be220928d1ae6f\n"},
-		".git/refs/stacker/remote/test-branch-2": {exists: true, content: "cb53d6cb3801cd371346e474e7d4c6d79d6dd56c\n"},
+	baseCommit := readFile(t, workDir, ".git/refs/heads/main")
+
+	assertFiles(t, workDir, map[string]*fileState{
+		".git/HEAD":                              file("ref: refs/heads/test-branch-2\n"),
+		".git/refs/remotes/origin/test-branch-2": file(branchCommit),
+		".git/refs/stacker/base/test-branch-2":   file("ref: refs/heads/main\n"),
+		".git/refs/stacker/start/test-branch-2":  file(baseCommit),
+		".git/refs/stacker/remote/test-branch-2": file(branchCommit),
 	})
 }
