@@ -6,14 +6,48 @@ Easy git rebasing of stacked feature branches
 
 Stacker is recommended for a workflow where
 *  individual contributors work in the same repository,
-*  commits are made to dev branches forked from the main or a topic branch,
-*  each dev branch is used by the one contributor and
-*  dev branches are merged after code review into the base branch.
+*  commits are made to dev branches that are forked from the main or a topic
+   branch,
+*  each dev branch is completely owned and used by the one contributor and
+*  contributors are expected to provide a clean commit history (without merges)
+   for review.
 
 Stacker helps with managing entire *stacks* of these dev branches, i.e. when
 they are branched off of and depend on each other, allowing for a more rapid
 development. While one branch is undergoing review another branch can be stacked
 onto it and worked in.
+
+## Workflow
+
+1. Create a new branch.
+
+   `stacker start my-new-feature`
+
+2. Do some work.
+
+   `git add ...`. `git commit ...`. Repeat.
+
+3. Meanwhile the base branch has merges from other contributors. Fetch
+   everything.
+
+   `stacker sync`
+
+4. Rebase the branch, so it forks off at the head of the base branch.
+
+   `stacker rebase`
+
+5. Publish the branch by pushing it the first time.
+
+   `stacker push`
+
+6. Oh, there's a bad commit.
+
+   `git rebase -i HEAD~5`
+
+7. Now the local branch and the remote branch divert. Push again to (forcefully)
+   set remote branch to what local branch points at.
+
+   `stacker push`
 
 ## Installation
 
@@ -98,7 +132,8 @@ Stacker mainly uses two commands to manage branches:
 *  `git push --set-upstream --force-with-lease=<branch>:<expected-commit> <remote> <branch>:<branch>`
 
    Pushes a branch to remote, potentially replacing the commit chain, so the
-   remote branch looks like the local branch.
+   remote branch looks exactly like the local branch. `<expected-commit>` is
+   what `refs/stacker/remote/<branch>` points to.
 
 In addition, Stacker uses a few more commands to help keeping track of things,
 like `for-each-ref`, `update-ref`, `symbolic-ref`, `check-ref-format`.
