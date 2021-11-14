@@ -24,7 +24,8 @@ type Git interface {
 func SnapshotRepository(g Git) (Repository, error) {
 	res, err := g.Exec(
 		"for-each-ref",
-		"--format="+formatFields.formatFlagValue(),
+		"--format",
+		formatFields.formatFlagValue(),
 	)
 	if err != nil {
 		return Repository{}, fmt.Errorf("cannot list refs: %w", err)

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -28,7 +29,13 @@ func (r *Runner) Exec(args ...string) (Result, error) {
 	c.Stdout = teeWriter{&res.Stdout, r.output.stdout()}
 	c.Stderr = teeWriter{&res.Stderr, r.output.stderr()}
 
-	fmt.Fprintf(r.output.stderr(), "### %s\n", c.Args)
+	quotedArgs := make([]string, 0, len(args))
+	for _, arg := range c.Args {
+		quotedArgs = append(quotedArgs, shellQuote(arg))
+	}
+	cmdLine := strings.Join(quotedArgs, " ")
+
+	fmt.Fprintf(r.output.stderr(), "### %s\n", cmdLine)
 
 	err := c.Run()
 	if exitErr, ok := err.(*exec.ExitError); ok {
@@ -36,10 +43,10 @@ func (r *Runner) Exec(args ...string) (Result, error) {
 	}
 
 	if err == nil {
-		fmt.Fprintf(os.Stderr, "[OK] %s\n", c.Args)
+		fmt.Fprintf(os.Stderr, "[OK] %s\n", cmdLine)
 		fmt.Fprintf(r.output.stderr(), "### [OK]\n")
 	} else {
-		fmt.Fprintf(os.Stderr, "[err %d] %s: %v\n", res.ExitCode, c.Args, err)
+		fmt.Fprintf(os.Stderr, "[err %d] %s: %v\n", res.ExitCode, cmdLine, err)
 		fmt.Fprintf(r.output.stderr(), "### [err %d]: %v\n", res.ExitCode, err)
 	}
 
