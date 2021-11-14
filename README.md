@@ -2,14 +2,18 @@
 
 Easy git rebasing of stacked feature branches
 
-## Workflow
+## Audience
 
-Stacker is recommended for a workflow where individual contributors work in the
-same repository where commits are made in separate dev branches each owned by
-one contributor and merged via pull request with code review into the main
-branch or a topic branch. Stacker helps with managing entire *stacks* of these
-dev branches, i.e. when they are branched off of and depend on each other,
-allowing for a more rapid development.
+Stacker is recommended for a workflow where
+*  individual contributors work in the same repository,
+*  commits are made to dev branches forked from the main or a topic branch,
+*  each dev branch is used by the one contributor and
+*  dev branches are merged after code review into the base branch.
+
+Stacker helps with managing entire *stacks* of these dev branches, i.e. when
+they are branched off of and depend on each other, allowing for a more rapid
+development. While one branch is undergoing review another branch can be stacked
+onto it and worked in.
 
 ## Installation
 
@@ -27,25 +31,18 @@ export PATH=$(go env GOPATH)/bin:$PATH
 
 ## Usage
 
-(Planned Features)
-
-* `stacker init [--force]` checks and creates any stacker-related refs. If
-  `--force` is used invalid refs are removed or replaced too.
-* `stacker clean [--force] [<branch>...]` removes any stacker-related refs.
-  `--force` must be used to when cleaning is called mid-rebase.
-* `stacker show` lists all stacker tracked branches with status as graph.
+* `stacker init` checks and creates any stacker-related refs.
+* `stacker clean` removes any stacker-related refs and settings.
 * `stacker start <branch>` starts new branch, marks it for remote tracking and
   switches to it.
-* `stacker push <branch>...` pushes one or more branches to remote and
-  marks them for tracking.
-* `stacker delete <branch>` safely deletes local branch and remote branch.
-* `stacker rebase [<branch>...]` rebases current stack or stack starting at
-  `<branch>`.
-* `stacker sync [<branch>...]` fetches remote branches of stacker tracked
-  branches and base branches, prunes deleted remote refs and pushes all outdated
-  branches.
+* `stacker push` pushes the current branch to remote and marks them for
+  tracking.
+* `stacker rebase` rebases the current branch.
+* `stacker sync` shortcut for `git fetch --all --prune`.
 
 ## Under the Hood
+
+### Tracking Refs
 
 Stacker uses custom refs to track branches:
 
@@ -68,39 +65,40 @@ Stacker uses custom refs to track branches:
 
 Stacker does not update/delete any refs outside `refs/stacker/`.
 
-## Used Git Commands
+### Config
 
-Following is the list of all used git commands. `git` is called with all
-environment variables inherited from `stacker`. <br> Protected branch names:
-master, main, release, production, staging. These names are not used with any
-commands, with the exception of rebasing `--onto`.
+Stacker puts a few settings into `$REPO/.git/config`:
 
-1. `git for-each-ref --format='%(HEAD)%(refname) %(objecttype) %(objectname) %(upstream:remotename) %(upstream)'`
+*  `log.excludeDecoration = refs/stacker/`
 
-   Gather all refs at startup.
+   To hide the trackings refs in `git log` output.
 
-2. `git update-ref --create-reflog refs/stacker/start/<branch> <commit> 0000000000000000000000000000000000000000`
+*  `transfer.hideRefs = refs/stacker/`
 
-   Mark the base of a branch with a new ref.
+   Probably over-paranoid. Just so there's no possibility these refs leave the
+   local repo.
 
-3. `git update-ref --create-reflog refs/stacker/start/<branch> <new-commit> <old-commit>`
+*  `stacker.*`
 
-   Move the base marker after rebasing.
+   Any stacker specific settings.
 
-4. `git update-ref -d refs/stacker/start/<branch> <commit>`
+Stacker will only touch the repo's config. It's safe to make these settings in
+`--global` or `--system`.
 
-   Delete the base marker.
+### Git Commands
 
-5. `git show-ref --verify <ref>`
+Stacker mainly uses two commands to manage branches:
 
-   Get commit of refs.
+*  `git rebase --committer-date-is-author-date --onto refs/stacker/base/<branch> refs/stacker/start/<branch> <branch>`
 
-6. `git rebase --committer-date-is-author-date --onto refs/stacker/base/<branch> refs/stacker/start/<branch> <branch>`
-
-   Rebasing a branch onto base branch starting at base marker. If there are
+   Rebases a branch onto its base branch starting at start marker. If there are
    conflict, rebasing will stop. Fix conflicts and use `--continue` or
    `--abort`. After a successful rebase the start marker ref will be moved.
 
-7. `git push --force-with-lease=<branch>:<expected-commit> <local-branch>:<remote-branch>`
+*  `git push --set-upstream --force-with-lease=<branch>:<expected-commit> <remote> <branch>:<branch>`
 
-   Push a rebased branch to remote, replacing the commit chain.
+   Pushes a branch to remote, potentially replacing the commit chain, so the
+   remote branch looks like the local branch.
+
+In addition, Stacker uses a few more commands to help keeping track of things,
+like `for-each-ref`, `update-ref`, `symbolic-ref`, `check-ref-format`.
