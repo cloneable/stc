@@ -59,7 +59,7 @@ var cmdEnv = []string{
 	"GIT_COMMITTER_DATE=1600000000 +0000",
 }
 
-func cmd(t *testing.T, dir, name string, args ...string) {
+func cmd(t *testing.T, dir, name string, args ...string) string {
 	t.Helper()
 	stdout := bytes.Buffer{}
 	stderr := bytes.Buffer{}
@@ -76,6 +76,7 @@ func cmd(t *testing.T, dir, name string, args ...string) {
 		t.Log("STDERR:\n", stderr.String())
 		t.Fatalf("command failed: %v", err)
 	}
+	return stdout.String()
 }
 
 func writeFile(t *testing.T, workDir, filePath, content string) {
@@ -266,4 +267,42 @@ func TestStackerRebase(t *testing.T) {
 		".git/refs/stacker/base/test-branch":  file("ref: refs/heads/main\n"),
 		".git/refs/stacker/start/test-branch": file(baseCommit),
 	})
+}
+
+func TestStackerInit(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	workDir := newRepo(t)
+
+	writeFile(t, workDir, "main.txt", "0\n")
+	cmd(t, workDir, "git", "add", "main.txt")
+	cmd(t, workDir, "git", "commit", "-m", "main: state 0")
+	cmd(t, workDir, "git", "push")
+
+	stkr := Stacker{
+		git: &git.Runner{
+			WorkDir: workDir,
+			Env:     cmdEnv,
+		},
+	}
+
+	if err := stkr.Init(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+
+	excludeDecorations := cmd(t, workDir, "git", "config", "--local", "--get-all", "log.excludeDecoration")
+	if got, want := excludeDecorations, "refs/stacker/\n"; got != want {
+		t.Errorf("log.excludeDecoration = %v, want %v", got, want)
+	}
+
+	if err := stkr.Init(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO: make Init idempotent
+	excludeDecorations = cmd(t, workDir, "git", "config", "--local", "--get-all", "log.excludeDecoration")
+	if got, want := excludeDecorations, "refs/stacker/\nrefs/stacker/\n"; got != want {
+		t.Errorf("log.excludeDecoration = %v, want %v", got, want)
+	}
 }
