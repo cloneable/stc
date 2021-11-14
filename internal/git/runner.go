@@ -35,7 +35,7 @@ func (r *Runner) Exec(args ...string) (Result, error) {
 	}
 	cmdLine := strings.Join(quotedArgs, " ")
 
-	fmt.Fprintf(r.output.stderr(), "### %s\n", cmdLine)
+	fmt.Fprintf(r.output.stderr(), "\n### %s\n", cmdLine)
 
 	err := c.Run()
 	if exitErr, ok := err.(*exec.ExitError); ok {
