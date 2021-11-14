@@ -8,11 +8,13 @@ import (
 )
 
 const (
-	StackerRefPrefix      = "refs/stacker/"
-	StackerBaseRefPrefix  = StackerRefPrefix + "base/"
-	StackerStartRefPrefix = StackerRefPrefix + "start/"
-	branchRefPrefix       = "refs/heads/"
-	tagRefPrefix          = "refs/tags/"
+	StackerRefPrefix       = "refs/stacker/"
+	StackerBaseRefPrefix   = StackerRefPrefix + "base/"
+	StackerStartRefPrefix  = StackerRefPrefix + "start/"
+	StackerRemoteRefPrefix = StackerRefPrefix + "remote/"
+
+	branchRefPrefix = "refs/heads/"
+	tagRefPrefix    = "refs/tags/"
 )
 
 type Repository struct {
@@ -131,10 +133,11 @@ func (n TagName) RefName() RefName { return RefName(tagRefPrefix + n) }
 
 type BranchName string
 
-func (n BranchName) String() string               { return string(n) }
-func (n BranchName) RefName() RefName             { return RefName(branchRefPrefix + n) }
-func (n BranchName) StackerBaseRefName() RefName  { return RefName(StackerBaseRefPrefix + n) }
-func (n BranchName) StackerStartRefName() RefName { return RefName(StackerStartRefPrefix + n) }
+func (n BranchName) String() string                { return string(n) }
+func (n BranchName) RefName() RefName              { return RefName(branchRefPrefix + n) }
+func (n BranchName) StackerBaseRefName() RefName   { return RefName(StackerBaseRefPrefix + n) }
+func (n BranchName) StackerStartRefName() RefName  { return RefName(StackerStartRefPrefix + n) }
+func (n BranchName) StackerRemoteRefName() RefName { return RefName(StackerRemoteRefPrefix + n) }
 
 type RemoteName string
 

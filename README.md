@@ -60,6 +60,12 @@ Stacker uses custom refs to track branches:
    The commit where the branch starts. Created when a branch is created. Updated
    after a rebase. Deleted when the branch is deleted.
 
+*  `refs/stacker/remote/<branchname>`
+
+   The commit where the remote branch head is expected to be. Created when a
+   branch is pushed for the first time. Updated after a push. Deleted when the
+   branch is deleted.
+
 Stacker does not update/delete any refs outside `refs/stacker/`.
 
 ## Used Git Commands
