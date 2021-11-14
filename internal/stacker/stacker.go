@@ -104,9 +104,11 @@ func (s *Stacker) Rebase(ctx context.Context, branches ...string) error {
 }
 
 func (s *Stacker) Sync(ctx context.Context, branches ...string) error {
-	// TODO: if len(branch) == 0 use current head as branch (head must be branch head)
-	// TODO: for each branch
-	// TODO: ... determine list of all stacked branches
-	// TODO: ... add unselected branches to list
-	return errUnimplemented
+	op := op(s.git)
+	op.fetchAllPrune()
+
+	// TODO: fast-forward base branches that are not stacker branches.
+	// TODO: push all or selected ahead/rebased stacker branches.
+
+	return op.Err()
 }

@@ -255,3 +255,18 @@ func (o *operation) configUnsetPattern(key, pattern string) {
 		return
 	}
 }
+
+func (o *operation) fetchAllPrune() {
+	if o == nil || o.err != nil {
+		return
+	}
+	_, err := o.git.Exec(
+		"fetch",
+		"--all",
+		"--prune",
+	)
+	if err != nil {
+		o.err = fmt.Errorf("fetchAllPrune: %w", err)
+		return
+	}
+}

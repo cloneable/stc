@@ -14,7 +14,6 @@ func init() {
 			return stacker.Sync(cmd.Context(), args...)
 		},
 		DisableFlagsInUseLine: true,
-		Hidden:                true, // TODO: unhide when ready
 	}
 	rootCmd.AddCommand(syncCmd)
 }
