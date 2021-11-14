@@ -157,10 +157,12 @@ var formatFields = forEachRefSpec{
 func (f fields) ref() Ref {
 	return Ref{
 		name:         RefName(f.RefName),
+		typ:          f.ObjectType,
 		objectName:   ObjectName(f.ObjectName),
 		head:         f.Head,
 		symRefTarget: RefName(f.SymRef),
 		remote:       RemoteName(f.Remote),
+		remoteRef:    RefName(f.RemoteRef),
 		upstreamRef:  RefName(f.Upstream),
 	}
 }

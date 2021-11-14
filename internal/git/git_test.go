@@ -37,6 +37,7 @@ func TestSnapshotRepository(t *testing.T) {
 			Remote:     "origin",
 			RemoteRef:  "refs/heads/main",
 			SymRef:     "",
+			Upstream:   "refs/remotes/origin/main",
 		}.String(),
 	}
 	repo, err := SnapshotRepository(g)
@@ -47,9 +48,13 @@ func TestSnapshotRepository(t *testing.T) {
 		refs: map[RefName]Ref{
 			"refs/heads/main": {
 				name:         "refs/heads/main",
+				typ:          TypeCommit,
 				objectName:   "dabfcd577644ee74ad10e150720c29130e8dc5ea",
 				head:         true,
 				symRefTarget: "",
+				remote:       "origin",
+				remoteRef:    "refs/heads/main",
+				upstreamRef:  "refs/remotes/origin/main",
 			},
 		},
 	})
@@ -74,6 +79,9 @@ func assertRef(t *testing.T, actual, expected Ref) {
 	if got, want := actual.name, expected.name; got != want {
 		t.Errorf(`name = %q, want %q`, got, want)
 	}
+	if got, want := actual.typ, expected.typ; got != want {
+		t.Errorf(`typ = %v, want %v`, got, want)
+	}
 	if got, want := actual.objectName, expected.objectName; got != want {
 		t.Errorf(`objectName = %q, want %q`, got, want)
 	}
@@ -82,5 +90,14 @@ func assertRef(t *testing.T, actual, expected Ref) {
 	}
 	if got, want := actual.symRefTarget, expected.symRefTarget; got != want {
 		t.Errorf(`symRefTarget = %q, want %q`, got, want)
+	}
+	if got, want := actual.remote, expected.remote; got != want {
+		t.Errorf(`remote = %q, want %q`, got, want)
+	}
+	if got, want := actual.remoteRef, expected.remoteRef; got != want {
+		t.Errorf(`remoteRef = %q, want %q`, got, want)
+	}
+	if got, want := actual.upstreamRef, expected.upstreamRef; got != want {
+		t.Errorf(`upstreamRef = %q, want %q`, got, want)
 	}
 }
