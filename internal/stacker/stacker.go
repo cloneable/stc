@@ -68,12 +68,21 @@ func (s *Stacker) Start(ctx context.Context, name string) error {
 	return op.Err()
 }
 
-func (s *Stacker) Publish(ctx context.Context, branches ...string) error {
+func (s *Stacker) Push(ctx context.Context, branches ...string) error {
+	op := op(s.git)
+	repo := op.snapshot()
+
+	curB := repo.Head()
+	symRef := repo.LookupRef(curB.StackerBaseRefName())
+	baseRef := repo.LookupRef(symRef.SymRefTarget())
+
+	op.pushUpstream(curB, baseRef.Remote())
+
 	// TODO: for each branch
 	// TODO: ... determine state (already pushed?)
 	// TODO: ... determine upstream
 	// TODO: ... push branch to remote
-	return errUnimplemented
+	return op.Err()
 }
 
 func (s *Stacker) Delete(ctx context.Context, branch string) error {

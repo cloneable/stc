@@ -188,21 +188,21 @@ func (o *operation) pushForce(b git.BranchName) {
 	}
 }
 
-// func (o *operation) pushUpstream(b git.BranchName) {
-// 	if o == nil || o.err != nil  {
-// 		return
-// 	}
-// 	_, err := o.git.Exec(
-// 		"push",
-// 		"--set-upstream",
-// 		remote,
-// 		string(remoteBranch),
-// 	)
-// 	if err != nil {
-// 		o.err = fmt.Errorf("pushUpstream: %w", err)
-// 		return
-// 	}
-// }
+func (o *operation) pushUpstream(name git.BranchName, remote git.RemoteName) {
+	if o == nil || o.err != nil {
+		return
+	}
+	_, err := o.git.Exec(
+		"push",
+		"--set-upstream",
+		remote.String(),
+		name.String(),
+	)
+	if err != nil {
+		o.err = fmt.Errorf("pushUpstream: %w", err)
+		return
+	}
+}
 
 func (o *operation) configSet(key, value string) {
 	if o == nil || o.err != nil {

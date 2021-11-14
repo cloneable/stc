@@ -154,6 +154,7 @@ func (f fields) ref() Ref {
 		objectName:   ObjectName(f.ObjectName),
 		head:         f.Head,
 		symRefTarget: RefName(f.SymRef),
+		remote:       RemoteName(f.Remote),
 	}
 }
 

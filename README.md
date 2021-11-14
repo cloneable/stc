@@ -36,7 +36,7 @@ export PATH=$(go env GOPATH)/bin:$PATH
 * `stacker show` lists all stacker tracked branches with status as graph.
 * `stacker start <branch>` starts new branch, marks it for remote tracking and
   switches to it.
-* `stacker publish <branch>...` pushes one or more branches to remote and
+* `stacker push <branch>...` pushes one or more branches to remote and
   marks them for tracking.
 * `stacker delete <branch>` safely deletes local branch and remote branch.
 * `stacker rebase [<branch>...]` rebases current stack or stack starting at
