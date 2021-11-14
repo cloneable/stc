@@ -108,6 +108,7 @@ func (o *operation) createRef(name git.RefName, commit git.ObjectName) {
 	}
 	_, err := o.git.Exec(
 		"update-ref",
+		"--no-deref",
 		"--create-reflog",
 		name.String(),
 		commit.String(),
@@ -125,6 +126,7 @@ func (o *operation) updateRef(name git.RefName, newCommit, curCommit git.ObjectN
 	}
 	_, err := o.git.Exec(
 		"update-ref",
+		"--no-deref",
 		"--create-reflog",
 		name.String(),
 		newCommit.String(),
@@ -184,22 +186,6 @@ func (o *operation) push(name git.BranchName, remote git.RemoteName, expect git.
 	)
 	if err != nil {
 		o.err = fmt.Errorf("pushForce: %w", err)
-		return
-	}
-}
-
-func (o *operation) pushUpstream(name git.BranchName, remote git.RemoteName) {
-	if o == nil || o.err != nil {
-		return
-	}
-	_, err := o.git.Exec(
-		"push",
-		"--set-upstream",
-		remote.String(),
-		name.String(),
-	)
-	if err != nil {
-		o.err = fmt.Errorf("pushUpstream: %w", err)
 		return
 	}
 }
