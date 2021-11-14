@@ -3,7 +3,6 @@ package git
 import (
 	"encoding"
 	"fmt"
-	"regexp"
 	"strings"
 )
 
@@ -113,23 +112,6 @@ func (r Ref) SymRefTarget() RefName  { return r.symRefTarget }
 func (r Ref) Remote() RemoteName     { return r.remote }
 func (r Ref) RemoteRefName() RefName { return r.remoteRef }
 func (r Ref) UpstreamRef() RefName   { return r.upstreamRef }
-
-var refLineRE = regexp.MustCompile("^([0-9a-f]{40}) (refs/.*)$")
-
-func ParseRef(line string) (Ref, error) {
-	groups := refLineRE.FindStringSubmatch(line)
-	if len(groups) != 3 {
-		return Ref{}, fmt.Errorf("invalid line: %q", line)
-	}
-	return Ref{
-		name:       RefName(groups[2]),
-		objectName: ObjectName(groups[1]),
-	}, nil
-}
-
-type TagName string
-
-func (n TagName) RefName() RefName { return RefName(tagRefPrefix + n) }
 
 type BranchName string
 
