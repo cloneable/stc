@@ -71,28 +71,21 @@ func (s *Stacker) Start(ctx context.Context, name string) error {
 func (s *Stacker) Push(ctx context.Context, branches ...string) error {
 	op := op(s.git)
 
+	var remoteTrackRef git.Ref
 	{
 		repo := op.snapshot()
 		curB := repo.Head()
 		symRef := repo.LookupRef(curB.StackerBaseRefName())
 		baseRef := repo.LookupRef(symRef.SymRefTarget())
-		op.pushUpstream(curB, baseRef.Remote())
+		remoteTrackRef = repo.LookupRef(curB.StackerRemoteRefName())
+		op.push(curB, baseRef.Remote(), remoteTrackRef.ObjectName())
 	}
 	{
 		repo := op.snapshot()
 		curB := repo.Head()
 		curRef := repo.LookupRef(curB.RefName())
-		op.createRef(curB.StackerRemoteRefName(), curRef.ObjectName())
+		op.updateRef(curB.StackerRemoteRefName(), curRef.ObjectName(), remoteTrackRef.ObjectName())
 	}
-
-	// repo = op.snapshot()
-	// curRef := repo.LookupRef(curB.RefName())
-	// upRef := repo.LookupRef(curRef.UpstreamRef())
-
-	// op.pushForce(curB.RefName(), curRef.Remote(), curRef.RemoteRefName(), upRef.ObjectName())
-
-	// TODO: this needs a third marker ref to detect updates to diverted from remote branches
-	// TODO: maybe do this before fetch and compare afterwards?
 
 	// TODO: for each branch
 	// TODO: ... determine state (already pushed?)

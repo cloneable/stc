@@ -171,15 +171,16 @@ func (o *operation) rebaseOnto(name git.BranchName) {
 	}
 }
 
-func (o *operation) pushForce(localRef git.RefName, remote git.RemoteName, remoteRef git.RefName, expect git.ObjectName) {
+func (o *operation) push(name git.BranchName, remote git.RemoteName, expect git.ObjectName) {
 	if o == nil || o.err != nil {
 		return
 	}
 	_, err := o.git.Exec(
 		"push",
-		fmt.Sprintf("--force-with-lease=%s:%s", localRef, expect),
+		"--set-upstream",
+		fmt.Sprintf("--force-with-lease=%s:%s", name, expect),
 		remote.String(),
-		fmt.Sprintf("%s:%s", localRef, remoteRef),
+		fmt.Sprintf("%s:%s", name, name),
 	)
 	if err != nil {
 		o.err = fmt.Errorf("pushForce: %w", err)
