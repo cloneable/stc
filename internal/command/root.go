@@ -35,9 +35,6 @@ var (
 	workdir = must(os.Getwd())
 	stacker = stackerpkg.New(workdir)
 
-	// used by some subcommands
-	forceFlag bool
-
 	printCommandsFlag bool
 
 	rootCmd = &cobra.Command{

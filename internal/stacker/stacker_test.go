@@ -287,7 +287,7 @@ func TestStackerInit(t *testing.T) {
 		},
 	}
 
-	if err := stkr.Init(ctx, false); err != nil {
+	if err := stkr.Init(ctx); err != nil {
 		t.Fatal(err)
 	}
 
@@ -296,7 +296,7 @@ func TestStackerInit(t *testing.T) {
 		t.Errorf("log.excludeDecoration = %v, want %v", got, want)
 	}
 
-	if err := stkr.Init(ctx, false); err != nil {
+	if err := stkr.Init(ctx); err != nil {
 		t.Fatal(err)
 	}
 

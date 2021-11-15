@@ -6,10 +6,10 @@ import (
 
 func init() {
 	rebaseCmd := &cobra.Command{
-		Use:  "rebase",     //"rebase [<branch>...]",
-		Args: cobra.NoArgs, // validBranchNames(stacker, 0, math.MaxInt),
+		Use:  "rebase",
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return stacker.Rebase(cmd.Context(), args...)
+			return stacker.Rebase(cmd.Context())
 		},
 		DisableFlagsInUseLine: true,
 	}

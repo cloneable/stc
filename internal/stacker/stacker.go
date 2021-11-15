@@ -23,7 +23,7 @@ func New(repoPath string) *Stacker {
 	}
 }
 
-func (s *Stacker) Init(ctx context.Context, force bool) error {
+func (s *Stacker) Init(ctx context.Context) error {
 	op := op(s.git)
 	op.configAdd("transfer.hideRefs", git.StackerRefPrefix)
 	op.configAdd("log.excludeDecoration", git.StackerRefPrefix)
@@ -35,7 +35,7 @@ func (s *Stacker) Init(ctx context.Context, force bool) error {
 	return op.Err()
 }
 
-func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) error {
+func (s *Stacker) Clean(ctx context.Context) error {
 	op := op(s.git)
 	op.configUnsetPattern("transfer.hideRefs", git.StackerRefPrefix)
 	op.configUnsetPattern("log.excludeDecoration", git.StackerRefPrefix)
@@ -48,11 +48,6 @@ func (s *Stacker) Clean(ctx context.Context, force bool, branches ...string) err
 	// TODO: ... delete stacker refs
 	// TODO: ... or print warning
 	return op.Err()
-}
-
-func (s *Stacker) Show(ctx context.Context) error {
-	// TODO: list all stacker tracked branches with a status
-	return errUnimplemented
 }
 
 func (s *Stacker) Start(ctx context.Context, name string) error {
@@ -68,7 +63,7 @@ func (s *Stacker) Start(ctx context.Context, name string) error {
 	return op.Err()
 }
 
-func (s *Stacker) Push(ctx context.Context, branches ...string) error {
+func (s *Stacker) Push(ctx context.Context) error {
 	op := op(s.git)
 
 	var expectedCommit git.ObjectName
@@ -98,11 +93,7 @@ func (s *Stacker) Push(ctx context.Context, branches ...string) error {
 	return op.Err()
 }
 
-func (s *Stacker) Delete(ctx context.Context, branch string) error {
-	return errUnimplemented
-}
-
-func (s *Stacker) Rebase(ctx context.Context, branches ...string) error {
+func (s *Stacker) Rebase(ctx context.Context) error {
 	op := op(s.git)
 
 	// TODO: branches
@@ -125,7 +116,7 @@ func (s *Stacker) Rebase(ctx context.Context, branches ...string) error {
 	return op.Err()
 }
 
-func (s *Stacker) Sync(ctx context.Context, branches ...string) error {
+func (s *Stacker) Sync(ctx context.Context) error {
 	op := op(s.git)
 	op.fetchAllPrune()
 
