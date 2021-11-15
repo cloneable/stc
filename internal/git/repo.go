@@ -3,6 +3,7 @@ package git
 import (
 	"encoding"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -22,7 +23,15 @@ type Repository struct {
 	hasHead bool
 }
 
-func (r Repository) Head() (BranchName, bool)                  { return r.head, r.head != "" }
+func (r Repository) Head() (BranchName, bool) { return r.head, r.head != "" }
+func (r Repository) AllRefs() []Ref {
+	refs := make([]Ref, 0, len(r.refs))
+	for _, ref := range r.refs {
+		refs = append(refs, ref)
+	}
+	sort.Slice(refs, func(i, j int) bool { return refs[i].name < refs[j].name })
+	return refs
+}
 func (r Repository) LookupRef(name RefName) (ref Ref, ok bool) { ref, ok = r.refs[name]; return }
 func (r Repository) LookupBranch(name string) (BranchName, bool) {
 	n := BranchName(name)
@@ -88,6 +97,13 @@ func ParseRefName(name string) (RefName, error) {
 }
 
 func (n RefName) String() string { assert(n != ""); return string(n) }
+func (n RefName) BranchName() BranchName {
+	assert(n != "")
+	if idx := strings.LastIndexByte(string(n), '/'); idx >= 0 {
+		return BranchName(n[idx+1:])
+	}
+	return BranchName(n)
+}
 
 type ObjectName string
 
@@ -112,6 +128,7 @@ func (r Ref) SymRefTarget() RefName  { return r.symRefTarget }
 func (r Ref) Remote() RemoteName     { return r.remote }
 func (r Ref) RemoteRefName() RefName { return r.remoteRef }
 func (r Ref) UpstreamRef() RefName   { return r.upstreamRef }
+func (r Ref) Stacker() bool          { return strings.HasPrefix(string(r.name), StackerRefPrefix) }
 
 type BranchName string
 

@@ -2,6 +2,7 @@ package stacker
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/cloneable/stacker/internal/git"
 )
@@ -235,7 +236,7 @@ func (o *operation) push(name git.BranchName, remote git.RemoteName, expect git.
 		fmt.Sprintf("%s:%s", name, name),
 	)
 	if err != nil {
-		o.err = fmt.Errorf("pushForce: %w", err)
+		o.err = fmt.Errorf("push: %w", err)
 		return
 	}
 }
@@ -305,4 +306,22 @@ func (o *operation) fetchAllPrune() {
 		o.err = fmt.Errorf("fetchAllPrune: %w", err)
 		return
 	}
+}
+
+func (o *operation) trackedBranches() []git.BranchName {
+	if o == nil || o.err != nil {
+		return nil
+	}
+	branchMap := make(map[git.BranchName]bool)
+	for _, ref := range o.repo.AllRefs() {
+		if ref.Stacker() {
+			branchMap[ref.Name().BranchName()] = true
+		}
+	}
+	branches := make([]git.BranchName, 0, len(branchMap))
+	for branch := range branchMap {
+		branches = append(branches, branch)
+	}
+	sort.Slice(branches, func(i, j int) bool { return branches[i] < branches[j] })
+	return branches
 }
