@@ -22,8 +22,8 @@ type Repository struct {
 	hasHead bool
 }
 
-func (r Repository) Head() BranchName           { return r.head }
-func (r Repository) LookupRef(name RefName) Ref { return r.refs[name] }
+func (r Repository) Head() (BranchName, bool)                  { return r.head, r.head != "" }
+func (r Repository) LookupRef(name RefName) (ref Ref, ok bool) { ref, ok = r.refs[name]; return }
 func (r Repository) LookupBranch(name string) (BranchName, bool) {
 	n := BranchName(name)
 	_, ok := r.refs[n.RefName()]
@@ -87,13 +87,13 @@ func ParseRefName(name string) (RefName, error) {
 	return RefName(name), nil
 }
 
-func (n RefName) String() string { return string(n) }
+func (n RefName) String() string { assert(n != ""); return string(n) }
 
 type ObjectName string
 
 const NonExistantObject ObjectName = "0000000000000000000000000000000000000000"
 
-func (n ObjectName) String() string { return string(n) }
+func (n ObjectName) String() string { assert(n != ""); return string(n) }
 
 type Ref struct {
 	name         RefName
@@ -115,7 +115,8 @@ func (r Ref) UpstreamRef() RefName   { return r.upstreamRef }
 
 type BranchName string
 
-func (n BranchName) String() string                { return string(n) }
+func (n BranchName) String() string { assert(n != ""); return string(n) }
+
 func (n BranchName) RefName() RefName              { return RefName(branchRefPrefix + n) }
 func (n BranchName) StackerBaseRefName() RefName   { return RefName(StackerBaseRefPrefix + n) }
 func (n BranchName) StackerStartRefName() RefName  { return RefName(StackerStartRefPrefix + n) }
@@ -123,4 +124,10 @@ func (n BranchName) StackerRemoteRefName() RefName { return RefName(StackerRemot
 
 type RemoteName string
 
-func (n RemoteName) String() string { return string(n) }
+func (n RemoteName) String() string { assert(n != ""); return string(n) }
+
+func assert(cond bool) {
+	if !cond {
+		panic("bad assumption")
+	}
+}

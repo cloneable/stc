@@ -7,7 +7,8 @@ import (
 )
 
 type operation struct {
-	git git.Git
+	git  git.Git
+	repo git.Repository
 
 	err error
 }
@@ -18,6 +19,11 @@ func op(git git.Git) *operation {
 	}
 }
 
+func (o *operation) Failf(s string, args ...interface{}) error {
+	o.err = fmt.Errorf(s, args...)
+	return o.err
+}
+
 func (o *operation) Err() error {
 	if o != nil && o.err != nil {
 		o.git.DumpOutput()
@@ -26,16 +32,60 @@ func (o *operation) Err() error {
 	return nil
 }
 
-func (o *operation) snapshot() git.Repository {
+func (o *operation) snapshot() {
 	if o == nil || o.err != nil {
-		return git.Repository{}
+		return
 	}
 	repo, err := git.SnapshotRepository(o.git)
 	if err != nil {
 		o.err = fmt.Errorf("snapshot: %w", err)
-		return git.Repository{}
+		return
 	}
-	return repo
+	o.repo = repo
+}
+
+func (o *operation) head() git.BranchName {
+	if o == nil || o.err != nil {
+		return ""
+	}
+	head, ok := o.repo.Head()
+	if !ok {
+		o.err = fmt.Errorf("HEAD is unset")
+		return ""
+	}
+	return head
+}
+
+func (o *operation) hasRef(name git.RefName) bool {
+	if o == nil || o.err != nil {
+		return false
+	}
+	_, found := o.repo.LookupRef(name)
+	return found
+}
+
+func (o *operation) ref(name git.RefName) git.Ref {
+	if o == nil || o.err != nil {
+		return git.Ref{}
+	}
+	ref, ok := o.repo.LookupRef(name)
+	if !ok {
+		o.err = fmt.Errorf("ref %s not found", name)
+		return git.Ref{}
+	}
+	return ref
+}
+
+func (o *operation) branch(name string) git.BranchName {
+	if o == nil || o.err != nil {
+		return ""
+	}
+	branchName, ok := o.repo.LookupBranch(name)
+	if !ok {
+		o.err = fmt.Errorf("ref %s not found", name)
+		return ""
+	}
+	return branchName
 }
 
 func (o *operation) parseBranchName(name string) git.BranchName {

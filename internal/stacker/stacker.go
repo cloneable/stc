@@ -57,13 +57,13 @@ func (s *Stacker) Show(ctx context.Context) error {
 
 func (s *Stacker) Start(ctx context.Context, name string) error {
 	op := op(s.git)
-	repo := op.snapshot()
-	baseB := repo.Head()
+	op.snapshot()
+	baseB := op.head()
 	newName := op.parseBranchName(name)
 	op.createBranch(newName, baseB)
 	op.switchBranch(newName)
 	op.createSymref(newName.StackerBaseRefName(), baseB.RefName(), "stacker: base branch marker")
-	baseRef := repo.LookupRef(baseB.RefName())
+	baseRef := op.ref(baseB.RefName())
 	op.createRef(newName.StackerStartRefName(), baseRef.ObjectName())
 	return op.Err()
 }
@@ -71,20 +71,24 @@ func (s *Stacker) Start(ctx context.Context, name string) error {
 func (s *Stacker) Push(ctx context.Context, branches ...string) error {
 	op := op(s.git)
 
-	var remoteTrackRef git.Ref
+	var expectedCommit git.ObjectName
 	{
-		repo := op.snapshot()
-		curB := repo.Head()
-		symRef := repo.LookupRef(curB.StackerBaseRefName())
-		baseRef := repo.LookupRef(symRef.SymRefTarget())
-		remoteTrackRef = repo.LookupRef(curB.StackerRemoteRefName())
-		op.push(curB, baseRef.Remote(), remoteTrackRef.ObjectName())
+		op.snapshot()
+		curB := op.head()
+		symRef := op.ref(curB.StackerBaseRefName())
+		baseRef := op.ref(symRef.SymRefTarget())
+		if op.hasRef(curB.StackerRemoteRefName()) {
+			expectedCommit = op.ref(curB.StackerRemoteRefName()).ObjectName()
+		} else {
+			expectedCommit = git.NonExistantObject
+		}
+		op.push(curB, baseRef.Remote(), expectedCommit)
 	}
 	{
-		repo := op.snapshot()
-		curB := repo.Head()
-		curRef := repo.LookupRef(curB.RefName())
-		op.updateRef(curB.StackerRemoteRefName(), curRef.ObjectName(), remoteTrackRef.ObjectName())
+		op.snapshot()
+		curB := op.head()
+		curRef := op.ref(curB.RefName())
+		op.updateRef(curB.StackerRemoteRefName(), curRef.ObjectName(), expectedCommit)
 	}
 
 	// TODO: for each branch
@@ -103,10 +107,10 @@ func (s *Stacker) Rebase(ctx context.Context, branches ...string) error {
 
 	// TODO: branches
 
-	repo := op.snapshot()
-	branch := repo.Head()
-	baseRef := repo.LookupRef(branch.StackerBaseRefName())
-	startRef := repo.LookupRef(branch.StackerStartRefName())
+	op.snapshot()
+	branch := op.head()
+	baseRef := op.ref(branch.StackerBaseRefName())
+	startRef := op.ref(branch.StackerStartRefName())
 	op.rebaseOnto(branch)
 	op.updateRef(branch.StackerStartRefName(), baseRef.ObjectName(), startRef.ObjectName())
 
