@@ -306,3 +306,26 @@ func TestStackerInit(t *testing.T) {
 		t.Errorf("log.excludeDecoration = %v, want %v", got, want)
 	}
 }
+
+func TestStackerFix(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	workDir := newRepo(t)
+
+	writeFile(t, workDir, "main.txt", "0\n")
+	cmd(t, workDir, "git", "add", "main.txt")
+	cmd(t, workDir, "git", "commit", "-m", "main: state 0")
+	cmd(t, workDir, "git", "push")
+
+	stkr := Stacker{
+		git: &git.Runner{
+			WorkDir: workDir,
+			Env:     cmdEnv,
+		},
+	}
+
+	if err := stkr.Fix(ctx); err != nil {
+		t.Fatal(err)
+	}
+}

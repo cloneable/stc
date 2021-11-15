@@ -130,3 +130,17 @@ func (s *Stacker) Sync(ctx context.Context, branches ...string) error {
 
 	return op.Err()
 }
+
+func (s *Stacker) Fix(ctx context.Context) error {
+	op := op(s.git)
+
+	// TODO: look for any refs/stacker/*/* branches
+	// TODO: no such local branch? -> delete tracking ref
+	// TODO: no /base/, but /start/ -> look for branch head at /start/, set /base/
+	// TODO: no /start/, but /base/ -> use git merge-base to find fork point
+	// TODO: no /start/ nor /base/ -> do nothing, offer explicit way to track
+	// TODO: no /remote/, but remote branch exists? -> set ref, if ancestor, if not -> error
+	// TODO: no remote branch, but /remote/ -> delete ref (check origin?)
+
+	return op.Err()
+}
