@@ -126,11 +126,78 @@ func (s *Stacker) Sync(ctx context.Context) error {
 	return op.Err()
 }
 
-func (s *Stacker) Fix(ctx context.Context) error {
+func (s *Stacker) Fix(ctx context.Context, branches ...string) error {
 	op := op(s.git)
 
-	// TODO: look for any refs/stacker/*/* branches
-	// TODO: no such local branch? -> delete tracking ref
+	// TODO: this is hacky. refactor.
+	if len(branches) == 2 {
+		branch := op.parseBranchName(branches[0])
+		baseBranch := op.parseBranchName(branches[1])
+		if baseSymrefName := branch.StackerBaseRefName(); op.hasRef(baseSymrefName) {
+			baseSymref := op.ref(baseSymrefName)
+			if baseSymref.SymRefTarget() != baseBranch.RefName() {
+				return op.Failf("base branch already defined: %v", baseSymref.SymRefTarget())
+			}
+		} else {
+			op.createSymref(branch.StackerBaseRefName(), baseBranch.RefName(), "stacker: set base branch")
+		}
+		if startRefName := branch.StackerStartRefName(); op.hasRef(startRefName) {
+			// TODO: check if base or ancestor of base
+		} else {
+			forkpoint := op.forkpoint(baseBranch.RefName(), branch.RefName())
+			op.createRef(branch.StackerStartRefName(), forkpoint)
+		}
+		return nil
+	} else if len(branches) != 0 {
+		return op.Failf("invalid arguments: %v", branches)
+	}
+
+	op.snapshot()
+	for _, branch := range op.trackedBranches() {
+		if !op.hasRef(branch.RefName()) {
+			if r := branch.StackerBaseRefName(); op.hasRef(r) {
+				op.deleteSymref(r)
+			}
+			if r := branch.StackerStartRefName(); op.hasRef(r) {
+				ref := op.ref(r)
+				op.deleteRef(r, ref.ObjectName())
+			}
+			if r := branch.StackerRemoteRefName(); op.hasRef(r) {
+				ref := op.ref(r)
+				op.deleteRef(r, ref.ObjectName())
+			}
+		}
+	}
+
+	op.snapshot()
+	for _, branch := range op.trackedBranches() {
+		// for each existing branch that's somehow still being tracked:
+		baseSymrefName := branch.StackerBaseRefName()
+		startRefName := branch.StackerStartRefName()
+		if op.hasRef(baseSymrefName) {
+			// there's a base symref
+			if !op.hasRef(startRefName) {
+				// but no start ref
+				baseSymref := op.ref(branch.StackerBaseRefName())
+				if !op.hasRef(baseSymref.SymRefTarget()) {
+					// TODO: base branch doesn't exist (anymore)
+					continue
+				}
+				// figure out forkpoint from what the base symref points to and the branch
+				// TODO: forkpoint can fail
+				forkpoint := op.forkpoint(baseSymref.SymRefTarget(), branch.RefName())
+				// write the commit as start ref
+				op.createRef(branch.StackerStartRefName(), forkpoint)
+			}
+		} else {
+			// there's no base symref
+			if op.hasRef(startRefName) {
+				// but there's a start ref
+				// TODO: check for branch at that commit? consult reflog?
+			}
+		}
+	}
+
 	// TODO: no /base/, but /start/ -> look for branch head at /start/, set /base/
 	// TODO: no /start/, but /base/ -> use git merge-base to find fork point
 	// TODO: no /start/ nor /base/ -> do nothing, offer explicit way to track

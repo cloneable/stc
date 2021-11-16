@@ -3,6 +3,7 @@ package stacker
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/cloneable/stacker/internal/git"
 )
@@ -149,6 +150,21 @@ func (o *operation) createSymref(name, target git.RefName, reason string) {
 	)
 	if err != nil {
 		o.err = fmt.Errorf("createSymref: %w", err)
+		return
+	}
+}
+
+func (o *operation) deleteSymref(name git.RefName) {
+	if o == nil || o.err != nil {
+		return
+	}
+	_, err := o.git.Exec(
+		"symbolic-ref",
+		"--delete",
+		name.String(),
+	)
+	if err != nil {
+		o.err = fmt.Errorf("deleteSymref: %w", err)
 		return
 	}
 }
@@ -324,4 +340,22 @@ func (o *operation) trackedBranches() []git.BranchName {
 	}
 	sort.Slice(branches, func(i, j int) bool { return branches[i] < branches[j] })
 	return branches
+}
+
+func (o *operation) forkpoint(base, branch git.RefName) git.ObjectName {
+	if o == nil || o.err != nil {
+		return ""
+	}
+	res, err := o.git.Exec(
+		"merge-base",
+		"--fork-point",
+		base.String(),
+		branch.String(),
+	)
+	if err != nil {
+		o.err = fmt.Errorf("forkpoint: %w", err)
+		return ""
+	}
+	// TODO: handle not found
+	return git.ObjectName(strings.TrimSpace(res.Stdout.String()))
 }
