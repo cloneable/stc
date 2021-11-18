@@ -4,7 +4,7 @@
 
 use ::clap::{self, Parser, Subcommand};
 use ::std::option::Option::{self, None, Some};
-use ::std::println;
+use ::std::result::Result;
 use ::std::string::String;
 
 mod git;
@@ -79,30 +79,17 @@ enum Command {
     Sync,
 }
 
-fn main() {
+fn main() -> Result<(), ::std::io::Error> {
     let root = Root::parse();
-
+    let runner = runner::Runner::new("git");
+    let stc = stc::STC::new(&runner);
     match root.subcommand {
-        Command::Clean => {
-            println!("clean");
-        }
-        Command::Fix { branch, base } => {
-            println!("fix {:?} {:?}", branch, base);
-        }
-        Command::Init => {
-            println!("init");
-        }
-        Command::Push => {
-            println!("push");
-        }
-        Command::Rebase => {
-            println!("rebase");
-        }
-        Command::Start { branch } => {
-            println!("start {:?}", branch);
-        }
-        Command::Sync => {
-            println!("sync");
-        }
+        Command::Clean => stc.clean(),
+        Command::Fix { branch, base } => stc.fix(branch, base),
+        Command::Init => stc.init(),
+        Command::Push => stc.push(),
+        Command::Rebase => stc.rebase(),
+        Command::Start { branch } => stc.start(branch),
+        Command::Sync => stc.sync(),
     }
 }
