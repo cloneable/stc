@@ -1,10 +1,15 @@
 #![no_implicit_prelude]
 #![allow(missing_docs)] // TODO: change to warn/deny
+#![allow(dead_code)] // TODO: remove
 
 use ::clap::{self, Parser, Subcommand};
 use ::std::option::Option::{self, None, Some};
 use ::std::println;
 use ::std::string::String;
+
+mod git;
+mod runner;
+mod stc;
 
 #[derive(Parser)]
 #[clap(about, version)]
