@@ -1,0 +1,18 @@
+[package]
+name = "stc"
+description = "Easy stacking of dev branches in git repositories."
+version = "0.0.6"
+authors = ["Folke Behrens <folke@gmail.com>"]
+edition = "2021"
+repository = "https://github.com/cloneable/stacker/"
+license = "Apache-2.0"
+
+[dependencies.clap]
+version = "3.0.0-beta.5"
+default-features = false
+features = ["std", "derive"]
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
