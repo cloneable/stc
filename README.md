@@ -49,30 +49,30 @@ onto it and worked in.
 
    `stacker push`
 
-## Installation
-
-Requires Go toolchain 1.17 or later.
-
-```sh
-go install github.com/cloneable/stacker@latest
-```
-
-Make sure `stacker` is in your $PATH.
-
-```sh
-export PATH=$(go env GOPATH)/bin:$PATH
-```
-
 ## Usage
 
-* `stacker init` checks and creates any stacker-related refs.
-* `stacker clean` removes any stacker-related refs and settings.
-* `stacker start <branch>` starts new branch, marks it for remote tracking and
-  switches to it.
-* `stacker push` pushes the current branch to remote and marks them for
-  tracking.
-* `stacker rebase` rebases the current branch.
-* `stacker sync` shortcut for `git fetch --all --prune`.
+```
+stacker 0.1.0
+
+Easy stacking of dev branches in git repositories.
+
+USAGE:
+    stacker <SUBCOMMAND>
+
+OPTIONS:
+    -h, --help       Print help information
+    -V, --version    Print version information
+
+SUBCOMMANDS:
+    clean     Cleans any stacker related refs and settings from repo.
+    fix       Adds, updates and deletes tracking refs if needed.
+    help      Print this message or the help of the given subcommand(s)
+    init      Initializes the repo and tries to set stacker refs for any non-default branches.
+    push      Sets remote branch head to what local branch head points to.
+    rebase    Rebases current branch on top of its base branch.
+    start     Starts a new branch off of current branch.
+    sync      Fetches all branches and tags and prunes deleted ones.
+```
 
 ## Under the Hood
 
