@@ -79,7 +79,7 @@ enum Command {
     Sync,
 }
 
-fn main() -> Result<(), ::std::io::Error> {
+fn main() -> Result<(), git::Status> {
     let root = Root::parse();
     let runner = runner::Runner::new("git");
     let stc = stc::STC::new(&runner);
