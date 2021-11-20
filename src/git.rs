@@ -21,10 +21,10 @@ use ::std::write;
 // TODO: use ObjectName as type for const if possibe
 pub const NON_EXISTANT_OBJECT: &'static str = "0000000000000000000000000000000000000000";
 
-pub const STACKER_REF_PREFIX: &'static str = "refs/stacker/";
-pub const STACKER_BASE_REF_PREFIX: &'static str = concatcp!(STACKER_REF_PREFIX, "base/");
-pub const STACKER_START_REF_PREFIX: &'static str = concatcp!(STACKER_REF_PREFIX, "start/");
-pub const STACKER_REMOTE_REF_PREFIX: &'static str = concatcp!(STACKER_REF_PREFIX, "remote/");
+pub const STC_REF_PREFIX: &'static str = "refs/stc/";
+pub const STC_BASE_REF_PREFIX: &'static str = concatcp!(STC_REF_PREFIX, "base/");
+pub const STC_START_REF_PREFIX: &'static str = concatcp!(STC_REF_PREFIX, "start/");
+pub const STC_REMOTE_REF_PREFIX: &'static str = concatcp!(STC_REF_PREFIX, "remote/");
 
 pub const BRANCH_REF_PREFIX: &'static str = "refs/heads/";
 
@@ -154,8 +154,8 @@ pub trait Git {
             "rebase",
             "--committer-date-is-author-date",
             "--onto",
-            name.stacker_base_refname().as_str(),
-            name.stacker_start_refname().as_str(),
+            name.stc_base_refname().as_str(),
+            name.stc_start_refname().as_str(),
             name.as_str(),
         ])
         .map(move |_| -> () {})
@@ -253,16 +253,16 @@ impl<'a> BranchName<'a> {
         RefName(Cow::Owned(BRANCH_REF_PREFIX.to_string() + &self.0))
     }
 
-    pub fn stacker_base_refname(&self) -> RefName {
-        RefName(Cow::Owned(STACKER_BASE_REF_PREFIX.to_string() + &self.0))
+    pub fn stc_base_refname(&self) -> RefName {
+        RefName(Cow::Owned(STC_BASE_REF_PREFIX.to_string() + &self.0))
     }
 
-    pub fn stacker_start_refname(&self) -> RefName {
-        RefName(Cow::Owned(STACKER_START_REF_PREFIX.to_string() + &self.0))
+    pub fn stc_start_refname(&self) -> RefName {
+        RefName(Cow::Owned(STC_START_REF_PREFIX.to_string() + &self.0))
     }
 
-    pub fn stacker_remote_refname(&self) -> RefName {
-        RefName(Cow::Owned(STACKER_REMOTE_REF_PREFIX.to_string() + &self.0))
+    pub fn stc_remote_refname(&self) -> RefName {
+        RefName(Cow::Owned(STC_REMOTE_REF_PREFIX.to_string() + &self.0))
     }
 }
 
