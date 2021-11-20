@@ -4,6 +4,7 @@ use ::serde::Deserialize;
 use ::std::borrow::Cow;
 use ::std::clone::Clone;
 use ::std::collections::HashMap;
+use ::std::convert::From;
 use ::std::default::Default;
 use ::std::error::Error;
 use ::std::format;
@@ -250,6 +251,10 @@ impl<'a> BranchName<'a> {
 pub struct RefName<'a>(Cow<'a, String>);
 
 impl<'a> RefName<'a> {
+    const fn new(name: String) -> Self {
+        RefName(Cow::Owned(name))
+    }
+
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
@@ -259,7 +264,7 @@ impl<'a> RefName<'a> {
 pub struct ObjectName<'a>(Cow<'a, String>);
 
 impl<'a> ObjectName<'a> {
-    pub const fn new(value: String) -> ObjectName<'a> {
+    pub const fn new(value: String) -> Self {
         ObjectName(Cow::Owned(value))
     }
 
@@ -272,12 +277,16 @@ impl<'a> ObjectName<'a> {
 pub struct RemoteName<'a>(Cow<'a, String>);
 
 impl<'a> RemoteName<'a> {
+    const fn new(value: String) -> Self {
+        RemoteName(Cow::Owned(value))
+    }
+
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum RefType {
     Commit,
@@ -286,7 +295,7 @@ pub enum RefType {
     Tag,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, PartialEq, Debug)]
 pub struct Ref<'a> {
     pub name: RefName<'a>,
     pub head: bool,
@@ -314,7 +323,10 @@ const FIELD_FORMATS: [&'static str; 9] = [
 fn parse_ref<'a, R: ::std::io::Read + ::std::fmt::Debug>(
     csv: R,
 ) -> Result<HashMap<RefName<'a>, Ref<'a>>, ::csv::Error> {
-    let mut reader = ReaderBuilder::new().delimiter(b',').from_reader(csv);
+    let mut reader = ReaderBuilder::new()
+        .has_headers(false)
+        .delimiter(b',')
+        .from_reader(csv);
     let ref_vec = reader
         .deserialize::<Ref>()
         .collect::<Result<Vec<Ref>, ::csv::Error>>()?;
@@ -333,12 +345,24 @@ mod tests {
     #[test]
     fn test_parse_ref() {
         let csv = "\
-name,head,objectname,objecttype,track,remote,remote_refname,symref_target,upstream_refname
 refs/heads/moo1,true,123abc,commit,<>,origin,refs/heads/moo,,refs/remotes/origin/moo
-refs/heads/moo2,true,123abc,commit,<>,origin,refs/heads/moo,,refs/remotes/origin/moo
-refs/heads/moo3,true,123abc,commit,<>,origin,refs/heads/moo,,refs/remotes/origin/moo
 ";
         let refs = parse_ref(csv.as_bytes()).expect("cannot parse");
-        assert_eq!(refs.len(), 3);
+        assert_eq!(refs.len(), 1);
+        assert_eq!(
+            refs.get(&RefName::new("refs/heads/moo1".to_string()))
+                .unwrap(),
+            &Ref {
+                name: RefName::new("refs/heads/moo1".to_string()),
+                head: true,
+                objectname: ObjectName::new("123abc".to_string()),
+                objecttype: RefType::Commit,
+                track: String::from("<>"),
+                remote: RemoteName::new("origin".to_string()),
+                remote_refname: RefName::new("refs/heads/moo".to_string()),
+                symref_target: RefName::new("".to_string()),
+                upstream_refname: RefName::new("refs/remotes/origin/moo".to_string()),
+            }
+        )
     }
 }
