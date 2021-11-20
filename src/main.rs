@@ -23,15 +23,15 @@ struct Root {
 enum Command {
     #[clap(
         name = "clean",
-        about = "Cleans any stacker related refs and settings from repo.",
-        override_usage = "stacker clean"
+        about = "Cleans any stc related refs and settings from repo.",
+        override_usage = "stc clean"
     )]
     Clean,
 
     #[clap(
         name = "fix",
         about = "Adds, updates and deletes tracking refs if needed.",
-        override_usage = "stacker fix [<branch> [<base]]"
+        override_usage = "stc fix [<branch> [<base]]"
     )]
     Fix {
         #[clap(name = "branch", about = "name of the branch to fix")]
@@ -42,29 +42,29 @@ enum Command {
 
     #[clap(
         name = "init",
-        about = "Initializes the repo and tries to set stacker refs for any non-default branches.",
-        override_usage = "stacker init"
+        about = "Initializes the repo and tries to set stc refs for any non-default branches.",
+        override_usage = "stc init"
     )]
     Init,
 
     #[clap(
         name = "push",
         about = "Sets remote branch head to what local branch head points to.",
-        override_usage = "stacker push"
+        override_usage = "stc push"
     )]
     Push,
 
     #[clap(
         name = "rebase",
         about = "Rebases current branch on top of its base branch.",
-        override_usage = "stacker rebase"
+        override_usage = "stc rebase"
     )]
     Rebase,
 
     #[clap(
         name = "start",
         about = "Starts a new branch off of current branch.",
-        override_usage = "stacker start <branch>"
+        override_usage = "stc start <branch>"
     )]
     Start {
         #[clap(name = "branch", about = "name of the new branch to create")]
@@ -74,7 +74,7 @@ enum Command {
     #[clap(
         name = "sync",
         about = "Fetches all branches and tags and prunes deleted ones.",
-        override_usage = "stacker sync"
+        override_usage = "stc sync"
     )]
     Sync,
 }

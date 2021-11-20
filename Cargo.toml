@@ -1,10 +1,10 @@
 [package]
 name = "stc"
 description = "[WIP] Easy stacking of dev branches in git repositories."
-version = "0.0.7"
+version = "0.0.8"
 authors = ["Folke Behrens <folke@gmail.com>"]
 edition = "2021"
-repository = "https://github.com/cloneable/stacker/tree/riir/"
+repository = "https://github.com/cloneable/stc/"
 license = "Apache-2.0"
 
 [dependencies]

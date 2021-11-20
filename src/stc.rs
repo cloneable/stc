@@ -16,11 +16,11 @@ impl<G: Git> STC<G> {
 
     pub fn init(&self) -> Result<(), Status> {
         let g = &self.git;
-        g.config_add("transfer.hideRefs", STACKER_REF_PREFIX)?;
-        g.config_add("log.excludeDecoration", STACKER_REF_PREFIX)?;
+        g.config_add("transfer.hideRefs", STC_REF_PREFIX)?;
+        g.config_add("log.excludeDecoration", STC_REF_PREFIX)?;
 
         // TODO: read refs, branches, remotes
-        // TODO: validate stacker refs against branches
+        // TODO: validate stc refs against branches
         // TODO: determine list of needed refs
         // TODO: print and create list of created refs
 
@@ -29,13 +29,13 @@ impl<G: Git> STC<G> {
 
     pub fn clean(&self) -> Result<(), Status> {
         let g = &self.git;
-        g.config_unset_pattern("transfer.hideRefs", STACKER_REF_PREFIX)?;
-        g.config_unset_pattern("log.excludeDecoration", STACKER_REF_PREFIX)?;
+        g.config_unset_pattern("transfer.hideRefs", STC_REF_PREFIX)?;
+        g.config_unset_pattern("log.excludeDecoration", STC_REF_PREFIX)?;
 
         // TODO: for each branch
         // TODO: ... check if fully merged
         // TODO: ... check if remote ref == local branch
-        // TODO: ... delete stacker refs
+        // TODO: ... delete stc refs
         // TODO: ... or print warning
 
         Ok(())
@@ -49,13 +49,13 @@ impl<G: Git> STC<G> {
         g.create_branch(&new_name, base_branch)?;
         g.switch_branch(&new_name)?;
         g.create_symref(
-            &new_name.stacker_base_refname(),
+            &new_name.stc_base_refname(),
             &base_branch.refname(),
-            "stacker: base branch marker",
+            "stc: base branch marker",
         )?;
         let base_refname = base_branch.refname();
         let base_ref = repo.get_ref(&base_refname).ok_or(Status::with(1))?;
-        g.create_ref(&new_name.stacker_start_refname(), &base_ref.objectname)?;
+        g.create_ref(&new_name.stc_start_refname(), &base_ref.objectname)?;
 
         Ok(())
     }
@@ -67,12 +67,12 @@ impl<G: Git> STC<G> {
         {
             let repo = g.snapshot()?;
             let cur_branch = repo.head().ok_or(Status::with(1))?;
-            let stacker_base_refname = cur_branch.stacker_base_refname();
-            let base_symref = repo.get_ref(&stacker_base_refname).ok_or(Status::with(1))?;
+            let stc_base_refname = cur_branch.stc_base_refname();
+            let base_symref = repo.get_ref(&stc_base_refname).ok_or(Status::with(1))?;
             let base_ref = repo
                 .get_ref(&base_symref.symref_target)
                 .ok_or(Status::with(1))?;
-            if let Some(remote_ref) = repo.get_ref(&cur_branch.stacker_remote_refname()) {
+            if let Some(remote_ref) = repo.get_ref(&cur_branch.stc_remote_refname()) {
                 // use ::std::borrow::ToOwned;
                 expected_commit = ObjectName::new(remote_ref.objectname.0.to_string());
             // TODO: clean clone
@@ -87,7 +87,7 @@ impl<G: Git> STC<G> {
             let cur_refname = cur_branch.refname();
             let cur_ref = repo.get_ref(&cur_refname).ok_or(Status::with(1))?;
             g.update_ref(
-                &cur_branch.stacker_remote_refname(),
+                &cur_branch.stc_remote_refname(),
                 &cur_ref.objectname,
                 &expected_commit,
             )?;
@@ -101,15 +101,13 @@ impl<G: Git> STC<G> {
 
         let repo = g.snapshot()?;
         let branch = repo.head().ok_or(Status::with(1))?;
-        let stacker_base_refname = branch.stacker_base_refname();
-        let stacker_start_refname = branch.stacker_start_refname();
-        let base_ref = repo.get_ref(&stacker_base_refname).ok_or(Status::with(1))?;
-        let start_ref = repo
-            .get_ref(&stacker_start_refname)
-            .ok_or(Status::with(1))?;
+        let stc_base_refname = branch.stc_base_refname();
+        let stc_start_refname = branch.stc_start_refname();
+        let base_ref = repo.get_ref(&stc_base_refname).ok_or(Status::with(1))?;
+        let start_ref = repo.get_ref(&stc_start_refname).ok_or(Status::with(1))?;
         g.rebase_onto(&branch)?;
         g.update_ref(
-            &branch.stacker_start_refname(),
+            &branch.stc_start_refname(),
             &base_ref.objectname,
             &start_ref.objectname,
         )?;
@@ -134,7 +132,7 @@ impl<G: Git> STC<G> {
             if let Some(base_branchname) = base {
                 let branch = g.check_branchname(&branchname)?;
                 let base_branch = g.check_branchname(&base_branchname)?;
-                if let Some(base_symref) = repo.get_ref(&branch.stacker_base_refname()) {
+                if let Some(base_symref) = repo.get_ref(&branch.stc_base_refname()) {
                     if base_symref.symref_target != base_branch.refname() {
                         return Err(Status::new(
                             1,
@@ -144,16 +142,16 @@ impl<G: Git> STC<G> {
                     }
                 } else {
                     g.create_symref(
-                        &branch.stacker_base_refname(),
+                        &branch.stc_base_refname(),
                         &base_branch.refname(),
-                        "stacker: set base branch",
+                        "stc: set base branch",
                     )?;
                 }
-                if let Some(_start_ref) = repo.get_ref(&branch.stacker_start_refname()) {
+                if let Some(_start_ref) = repo.get_ref(&branch.stc_start_refname()) {
                     // TODO: check if base or ancestor of base
                 } else {
                     let forkpoint = g.forkpoint(&base_branch.refname(), &branch.refname())?;
-                    g.create_ref(&branch.stacker_start_refname(), &forkpoint)?;
+                    g.create_ref(&branch.stc_start_refname(), &forkpoint)?;
                 }
             } else {
                 return Err(Status::new(
@@ -167,13 +165,13 @@ impl<G: Git> STC<G> {
         let repo = g.snapshot()?;
         for branch in g.tracked_branches()? {
             if repo.get_ref(&branch.refname()).is_none() {
-                if let Some(r) = repo.get_ref(&branch.stacker_base_refname()) {
+                if let Some(r) = repo.get_ref(&branch.stc_base_refname()) {
                     g.delete_symref(&r.name)?;
                 }
-                if let Some(r) = repo.get_ref(&branch.stacker_start_refname()) {
+                if let Some(r) = repo.get_ref(&branch.stc_start_refname()) {
                     g.delete_ref(&r.name, &r.objectname)?;
                 }
-                if let Some(r) = repo.get_ref(&branch.stacker_remote_refname()) {
+                if let Some(r) = repo.get_ref(&branch.stc_remote_refname()) {
                     g.delete_ref(&r.name, &r.objectname)?;
                 }
             }
@@ -182,8 +180,8 @@ impl<G: Git> STC<G> {
         let repo = g.snapshot()?;
         for branch in g.tracked_branches()? {
             // for each existing branch that's somehow still being tracked:
-            let base_symref_name = branch.stacker_base_refname();
-            let start_refname = branch.stacker_start_refname();
+            let base_symref_name = branch.stc_base_refname();
+            let start_refname = branch.stc_start_refname();
             if let Some(base_symref) = repo.get_ref(&base_symref_name) {
                 // there's a base symref
                 if repo.get_ref(&start_refname).is_none() {
@@ -196,7 +194,7 @@ impl<G: Git> STC<G> {
                     // TODO: forkpoint can fail
                     let forkpoint = g.forkpoint(&base_symref.symref_target, &branch.refname())?;
                     // write the commit as start ref
-                    g.create_ref(&branch.stacker_start_refname(), &forkpoint)?;
+                    g.create_ref(&branch.stc_start_refname(), &forkpoint)?;
                 }
             } else {
                 // there's no base symref
