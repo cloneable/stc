@@ -3,9 +3,11 @@
 #![allow(dead_code)] // TODO: remove
 
 use ::clap::{self, Parser, Subcommand};
-use ::std::option::Option::{self, None, Some};
-use ::std::result::Result;
-use ::std::string::String;
+use ::std::{
+    option::Option::{self, None, Some},
+    result::Result,
+    string::String,
+};
 
 mod git;
 mod runner;

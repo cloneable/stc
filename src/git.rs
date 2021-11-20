@@ -1,21 +1,21 @@
 use ::const_format::concatcp;
 use ::csv::ReaderBuilder;
 use ::serde::Deserialize;
-use ::std::borrow::Cow;
-use ::std::clone::Clone;
-use ::std::collections::HashMap;
-use ::std::default::Default;
-use ::std::error::Error;
-use ::std::format;
-use ::std::iter::IntoIterator;
-use ::std::iter::Iterator;
-use ::std::option::Option::{self, None};
-use ::std::result::Result::{self, Err, Ok};
-use ::std::string::String;
-use ::std::string::ToString;
-use ::std::todo;
-use ::std::vec::Vec;
-use ::std::write;
+use ::std::{
+    borrow::Cow,
+    clone::Clone,
+    collections::HashMap,
+    default::Default,
+    error::Error,
+    format,
+    iter::{IntoIterator, Iterator},
+    option::Option::{self, None},
+    result::Result::{self, Err, Ok},
+    string::{String, ToString},
+    todo,
+    vec::Vec,
+    write,
+};
 
 // TODO: use ObjectName as type for const if possibe
 pub const NON_EXISTANT_OBJECT: &str = "0000000000000000000000000000000000000000";
