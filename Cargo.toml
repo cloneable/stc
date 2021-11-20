@@ -6,6 +6,7 @@ authors = ["Folke Behrens <folke@gmail.com>"]
 edition = "2021"
 repository = "https://github.com/cloneable/stc/"
 license = "Apache-2.0"
+exclude = [".gitignore", ".github", "target"]
 
 [dependencies]
 const_format = "0.2.22"
