@@ -43,6 +43,14 @@ impl Status {
             stderr,
         }
     }
+
+    pub fn with(exitcode: i32) -> Self {
+        Status {
+            exitcode,
+            stdout: Default::default(),
+            stderr: Default::default(),
+        }
+    }
 }
 
 impl ::std::fmt::Display for Status {
@@ -69,14 +77,6 @@ pub trait Git {
         let status = self.exec(&["for-each-ref", "--format", FIELD_FORMATS.join(",").as_str()])?;
         parse_ref(status.stdout.as_slice())
             .map_err(move |_err| Status::new(1, Default::default(), Default::default()))
-    }
-
-    fn get_ref(&self, _name: &RefName) -> Result<Ref, Status> {
-        todo!()
-    }
-
-    fn branch(&self, _name: &String) -> Result<BranchName, Status> {
-        todo!()
     }
 
     fn check_branchname<'a>(&self, name: &'a String) -> Result<BranchName<'a>, Status> {
