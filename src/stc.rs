@@ -5,13 +5,13 @@ use ::std::string::String;
 use ::std::string::ToString;
 use ::std::vec::Vec;
 
-pub struct STC<G: Git> {
+pub struct Stc<G: Git> {
     git: G,
 }
 
-impl<G: Git> STC<G> {
+impl<G: Git> Stc<G> {
     pub fn new(git: G) -> Self {
-        STC { git }
+        Stc { git }
     }
 
     pub fn init(&self) -> Result<(), Status> {
@@ -44,7 +44,7 @@ impl<G: Git> STC<G> {
     pub fn start(&self, name: String) -> Result<(), Status> {
         let g = &self.git;
         let repo = g.snapshot()?;
-        let base_branch = repo.head().ok_or(Status::with(1))?;
+        let base_branch = repo.head().ok_or_else(|| Status::with(1))?;
         let new_name = g.check_branchname(&name)?;
         g.create_branch(&new_name, base_branch)?;
         g.switch_branch(&new_name)?;
@@ -54,7 +54,7 @@ impl<G: Git> STC<G> {
             "stc: base branch marker",
         )?;
         let base_refname = base_branch.refname();
-        let base_ref = repo.get_ref(&base_refname).ok_or(Status::with(1))?;
+        let base_ref = repo.get_ref(&base_refname).ok_or_else(|| Status::with(1))?;
         g.create_ref(&new_name.stc_start_refname(), &base_ref.objectname)?;
 
         Ok(())
@@ -66,12 +66,14 @@ impl<G: Git> STC<G> {
         let expected_commit: ObjectName;
         {
             let repo = g.snapshot()?;
-            let cur_branch = repo.head().ok_or(Status::with(1))?;
+            let cur_branch = repo.head().ok_or_else(|| Status::with(1))?;
             let stc_base_refname = cur_branch.stc_base_refname();
-            let base_symref = repo.get_ref(&stc_base_refname).ok_or(Status::with(1))?;
+            let base_symref = repo
+                .get_ref(&stc_base_refname)
+                .ok_or_else(|| Status::with(1))?;
             let base_ref = repo
                 .get_ref(&base_symref.symref_target)
-                .ok_or(Status::with(1))?;
+                .ok_or_else(|| Status::with(1))?;
             if let Some(remote_ref) = repo.get_ref(&cur_branch.stc_remote_refname()) {
                 // use ::std::borrow::ToOwned;
                 expected_commit = ObjectName::new(remote_ref.objectname.0.to_string());
@@ -79,13 +81,13 @@ impl<G: Git> STC<G> {
             } else {
                 expected_commit = ObjectName::new(NON_EXISTANT_OBJECT.to_string());
             }
-            g.push(&cur_branch, &base_ref.remote, &expected_commit)?;
+            g.push(cur_branch, &base_ref.remote, &expected_commit)?;
         }
         {
             let repo = g.snapshot()?;
-            let cur_branch = repo.head().ok_or(Status::with(1))?;
+            let cur_branch = repo.head().ok_or_else(|| Status::with(1))?;
             let cur_refname = cur_branch.refname();
-            let cur_ref = repo.get_ref(&cur_refname).ok_or(Status::with(1))?;
+            let cur_ref = repo.get_ref(&cur_refname).ok_or_else(|| Status::with(1))?;
             g.update_ref(
                 &cur_branch.stc_remote_refname(),
                 &cur_ref.objectname,
@@ -100,12 +102,16 @@ impl<G: Git> STC<G> {
         let g = &self.git;
 
         let repo = g.snapshot()?;
-        let branch = repo.head().ok_or(Status::with(1))?;
+        let branch = repo.head().ok_or_else(|| Status::with(1))?;
         let stc_base_refname = branch.stc_base_refname();
         let stc_start_refname = branch.stc_start_refname();
-        let base_ref = repo.get_ref(&stc_base_refname).ok_or(Status::with(1))?;
-        let start_ref = repo.get_ref(&stc_start_refname).ok_or(Status::with(1))?;
-        g.rebase_onto(&branch)?;
+        let base_ref = repo
+            .get_ref(&stc_base_refname)
+            .ok_or_else(|| Status::with(1))?;
+        let start_ref = repo
+            .get_ref(&stc_start_refname)
+            .ok_or_else(|| Status::with(1))?;
+        g.rebase_onto(branch)?;
         g.update_ref(
             &branch.stc_start_refname(),
             &base_ref.objectname,

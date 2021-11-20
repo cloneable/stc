@@ -82,7 +82,7 @@ enum Command {
 fn main() -> Result<(), git::Status> {
     let root = Root::parse();
     let runner = runner::Runner::new("git");
-    let stc = stc::STC::new(runner);
+    let stc = stc::Stc::new(runner);
     match root.subcommand {
         Command::Clean => stc.clean(),
         Command::Fix { branch, base } => stc.fix(branch, base),
