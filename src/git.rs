@@ -1,8 +1,14 @@
 use ::const_format::concatcp;
+use ::csv::ReaderBuilder;
+use ::serde::Deserialize;
 use ::std::borrow::Cow;
 use ::std::clone::Clone;
+use ::std::collections::HashMap;
+use ::std::default::Default;
 use ::std::error::Error;
 use ::std::format;
+use ::std::iter::IntoIterator;
+use ::std::iter::Iterator;
 use ::std::option::Option::{self, None};
 use ::std::result::Result::{self, Err, Ok};
 use ::std::string::String;
@@ -58,8 +64,10 @@ pub trait Git {
         todo!()
     }
 
-    fn snapshot(&self) -> Result<(), Status> {
-        todo!()
+    fn snapshot(&self) -> Result<HashMap<RefName, Ref>, Status> {
+        let status = self.exec(&["for-each-ref", "--format", FIELD_FORMATS.join(",").as_str()])?;
+        parse_ref(status.stdout.as_slice())
+            .map_err(move |_err| Status::new(1, Default::default(), Default::default()))
     }
 
     fn get_ref(&self, _name: &RefName) -> Result<Ref, Status> {
@@ -238,7 +246,7 @@ impl<'a> BranchName<'a> {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(Deserialize, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct RefName<'a>(Cow<'a, String>);
 
 impl<'a> RefName<'a> {
@@ -247,7 +255,7 @@ impl<'a> RefName<'a> {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Clone, Debug)]
+#[derive(Deserialize, PartialEq, PartialOrd, Clone, Debug)]
 pub struct ObjectName<'a>(Cow<'a, String>);
 
 impl<'a> ObjectName<'a> {
@@ -260,7 +268,7 @@ impl<'a> ObjectName<'a> {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(Deserialize, PartialEq, PartialOrd, Debug)]
 pub struct RemoteName<'a>(Cow<'a, String>);
 
 impl<'a> RemoteName<'a> {
@@ -269,7 +277,8 @@ impl<'a> RemoteName<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
 pub enum RefType {
     Commit,
     Tree,
@@ -277,14 +286,59 @@ pub enum RefType {
     Tag,
 }
 
-#[derive(Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Ref<'a> {
     pub name: RefName<'a>,
-    pub typ: RefType,
-    pub objectname: ObjectName<'a>,
     pub head: bool,
-    pub symref_target: RefName<'a>,
+    pub objectname: ObjectName<'a>,
+    pub objecttype: RefType,
+    pub track: String,
     pub remote: RemoteName<'a>,
     pub remote_refname: RefName<'a>,
+    pub symref_target: RefName<'a>,
     pub upstream_refname: RefName<'a>,
+}
+
+const FIELD_FORMATS: [&'static str; 9] = [
+    "%(refname)",                                // name
+    "%(if)%(HEAD)%(then)true%(else)false%(end)", // head
+    "%(objectname)",                             // objectname
+    "%(objecttype)",                             // objecttype
+    "%(upstream:trackshort)",                    // track
+    "%(upstream:remotename)",                    // remote
+    "%(upstream:remoteref)",                     // remote_refname
+    "%(symref)",                                 // symref_target
+    "%(upstream)",                               // upstream_refname
+];
+
+fn parse_ref<'a, R: ::std::io::Read + ::std::fmt::Debug>(
+    csv: R,
+) -> Result<HashMap<RefName<'a>, Ref<'a>>, ::csv::Error> {
+    let mut reader = ReaderBuilder::new().delimiter(b',').from_reader(csv);
+    let ref_vec = reader
+        .deserialize::<Ref>()
+        .collect::<Result<Vec<Ref>, ::csv::Error>>()?;
+    let refs = ref_vec
+        .into_iter()
+        .map(move |r| (r.name.clone(), r))
+        .collect::<HashMap<RefName, Ref>>();
+    Ok(refs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::std::assert_eq;
+
+    #[test]
+    fn test_parse_ref() {
+        let csv = "\
+name,head,objectname,objecttype,track,remote,remote_refname,symref_target,upstream_refname
+refs/heads/moo1,true,123abc,commit,<>,origin,refs/heads/moo,,refs/remotes/origin/moo
+refs/heads/moo2,true,123abc,commit,<>,origin,refs/heads/moo,,refs/remotes/origin/moo
+refs/heads/moo3,true,123abc,commit,<>,origin,refs/heads/moo,,refs/remotes/origin/moo
+";
+        let refs = parse_ref(csv.as_bytes()).expect("cannot parse");
+        assert_eq!(refs.len(), 3);
+    }
 }
