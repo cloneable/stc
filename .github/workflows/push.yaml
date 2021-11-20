@@ -32,7 +32,7 @@ jobs:
         shell: bash
 
       - name: cargo test
-        run: cargo test --lib -- --nocapture
+        run: cargo test -- --nocapture
         shell: bash
 
       - name: cargo package
