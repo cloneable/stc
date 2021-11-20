@@ -1,4 +1,5 @@
 use crate::git::*;
+use ::std::clone::Clone;
 use ::std::option::Option::{self, Some};
 use ::std::result::Result::{self, Err, Ok};
 use ::std::string::String;
@@ -43,7 +44,7 @@ impl<G: Git> STC<G> {
 
     pub fn start(&self, name: String) -> Result<(), Status> {
         let g = &self.git;
-        g.snapshot()?;
+        let refs = g.snapshot()?;
         let base_branch = g.head()?;
         let new_name = g.check_branchname(&name)?;
         g.create_branch(&new_name, &base_branch)?;
@@ -53,7 +54,7 @@ impl<G: Git> STC<G> {
             &base_branch.refname(),
             "stacker: base branch marker",
         )?;
-        let base_ref = g.get_ref(&base_branch.refname())?;
+        let base_ref = refs.get(&base_branch.refname()).ok_or(Status::with(1))?;
         g.create_ref(&new_name.stacker_start_refname(), &base_ref.objectname)?;
 
         Ok(())
@@ -64,21 +65,25 @@ impl<G: Git> STC<G> {
 
         let expected_commit: ObjectName;
         {
-            g.snapshot()?;
+            let refs = g.snapshot()?;
             let cur_branch = g.head()?;
-            let base_symref = g.get_ref(&cur_branch.stacker_base_refname())?;
-            let base_ref = g.get_ref(&base_symref.symref_target)?;
-            if let Ok(remote_ref) = g.get_ref(&cur_branch.stacker_remote_refname()) {
-                expected_commit = remote_ref.objectname;
+            let base_symref = refs
+                .get(&cur_branch.stacker_base_refname())
+                .ok_or(Status::with(1))?;
+            let base_ref = refs
+                .get(&base_symref.symref_target)
+                .ok_or(Status::with(1))?;
+            if let Some(remote_ref) = refs.get(&cur_branch.stacker_remote_refname()) {
+                expected_commit = remote_ref.objectname.clone();
             } else {
                 expected_commit = ObjectName::new(NON_EXISTANT_OBJECT.to_string());
             }
             g.push(&cur_branch, &base_ref.remote, &expected_commit)?;
         }
         {
-            g.snapshot()?;
+            let refs = g.snapshot()?;
             let cur_branch = g.head()?;
-            let cur_ref = g.get_ref(&cur_branch.refname())?;
+            let cur_ref = refs.get(&cur_branch.refname()).ok_or(Status::with(1))?;
             g.update_ref(
                 &cur_branch.stacker_remote_refname(),
                 &cur_ref.objectname,
@@ -92,10 +97,14 @@ impl<G: Git> STC<G> {
     pub fn rebase(&self) -> Result<(), Status> {
         let g = &self.git;
 
-        g.snapshot()?;
+        let refs = g.snapshot()?;
         let branch = g.head()?;
-        let base_ref = g.get_ref(&branch.stacker_base_refname())?;
-        let start_ref = g.get_ref(&branch.stacker_start_refname())?;
+        let base_ref = refs
+            .get(&branch.stacker_base_refname())
+            .ok_or(Status::with(1))?;
+        let start_ref = refs
+            .get(&branch.stacker_start_refname())
+            .ok_or(Status::with(1))?;
         g.rebase_onto(&branch)?;
         g.update_ref(
             &branch.stacker_start_refname(),
@@ -117,12 +126,13 @@ impl<G: Git> STC<G> {
     pub fn fix(&self, branch: Option<String>, base: Option<String>) -> Result<(), Status> {
         let g = &self.git;
 
+        let refs = g.snapshot()?;
         // TODO: this is hacky. refactor.
         if let Some(branchname) = branch {
             if let Some(base_branchname) = base {
                 let branch = g.check_branchname(&branchname)?;
                 let base_branch = g.check_branchname(&base_branchname)?;
-                if let Ok(base_symref) = g.get_ref(&branch.stacker_base_refname()) {
+                if let Some(base_symref) = refs.get(&branch.stacker_base_refname()) {
                     if base_symref.symref_target != base_branch.refname() {
                         return Err(Status::new(
                             1,
@@ -137,7 +147,7 @@ impl<G: Git> STC<G> {
                         "stacker: set base branch",
                     )?;
                 }
-                if let Ok(_start_ref) = g.get_ref(&branch.stacker_start_refname()) {
+                if let Some(_start_ref) = refs.get(&branch.stacker_start_refname()) {
                     // TODO: check if base or ancestor of base
                 } else {
                     let forkpoint = g.forkpoint(&base_branch.refname(), &branch.refname())?;
@@ -152,31 +162,31 @@ impl<G: Git> STC<G> {
             }
         }
 
-        g.snapshot()?;
+        let refs = g.snapshot()?;
         for branch in g.tracked_branches()? {
-            if g.get_ref(&branch.refname()).is_err() {
-                if let Ok(r) = g.get_ref(&branch.stacker_base_refname()) {
+            if refs.get(&branch.refname()).is_none() {
+                if let Some(r) = refs.get(&branch.stacker_base_refname()) {
                     g.delete_symref(&r.name)?;
                 }
-                if let Ok(r) = g.get_ref(&branch.stacker_start_refname()) {
+                if let Some(r) = refs.get(&branch.stacker_start_refname()) {
                     g.delete_ref(&r.name, &r.objectname)?;
                 }
-                if let Ok(r) = g.get_ref(&branch.stacker_remote_refname()) {
+                if let Some(r) = refs.get(&branch.stacker_remote_refname()) {
                     g.delete_ref(&r.name, &r.objectname)?;
                 }
             }
         }
 
-        g.snapshot()?;
+        let refs = g.snapshot()?;
         for branch in g.tracked_branches()? {
             // for each existing branch that's somehow still being tracked:
             let base_symref_name = branch.stacker_base_refname();
             let start_refname = branch.stacker_start_refname();
-            if let Ok(base_symref) = g.get_ref(&base_symref_name) {
+            if let Some(base_symref) = refs.get(&base_symref_name) {
                 // there's a base symref
-                if g.get_ref(&start_refname).is_err() {
+                if refs.get(&start_refname).is_none() {
                     // but no start ref
-                    if g.get_ref(&base_symref.symref_target).is_err() {
+                    if refs.get(&base_symref.symref_target).is_none() {
                         // TODO: base branch doesn't exist (anymore)
                         continue;
                     }
@@ -188,7 +198,7 @@ impl<G: Git> STC<G> {
                 }
             } else {
                 // there's no base symref
-                if let Ok(_start_ref) = g.get_ref(&start_refname) {
+                if let Some(_start_ref) = refs.get(&start_refname) {
                     // but there's a start ref
                     // TODO: check for branch at that commit? consult reflog?
                 }
