@@ -4,7 +4,7 @@ use ::serde::Deserialize;
 use ::std::{
     borrow::Cow,
     clone::Clone,
-    collections::HashMap,
+    collections::{BTreeSet, HashMap},
     default::Default,
     error::Error,
     format,
@@ -12,7 +12,6 @@ use ::std::{
     option::Option::{self, None},
     result::Result::{self, Err, Ok},
     string::{String, ToString},
-    todo,
     vec::Vec,
     write,
 };
@@ -200,10 +199,6 @@ pub trait Git {
         self.exec(&["fetch", "--all", "--prune"]).map(|_| {})
     }
 
-    fn tracked_branches(&self) -> Result<Vec<BranchName>, Status> {
-        todo!()
-    }
-
     fn forkpoint(&self, base: &RefName, branch: &RefName) -> Result<ObjectName, Status> {
         self.exec(&["merge-base", "--fork-point", base.as_str(), branch.as_str()])
             .map(move |status| {
@@ -228,9 +223,19 @@ impl<'a> Repository<'a> {
     pub fn head(&self) -> Option<&'a BranchName> {
         self.head.as_ref()
     }
+
+    pub fn tracked_branches(&self) -> Vec<BranchName> {
+        self.refs
+            .iter()
+            .filter(|(name, _)| name.0.starts_with(STC_REF_PREFIX))
+            .map(|(name, _)| name.branchname())
+            .collect::<BTreeSet<BranchName>>()
+            .into_iter()
+            .collect()
+    }
 }
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct BranchName<'a>(Cow<'a, String>);
 
 impl<'a> BranchName<'a> {

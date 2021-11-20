@@ -174,7 +174,7 @@ impl<G: git::Git> Stc<G> {
         }
 
         let repo = g.snapshot()?;
-        for branch in g.tracked_branches()? {
+        for branch in repo.tracked_branches() {
             if repo.get_ref(&branch.refname()).is_none() {
                 if let Some(r) = repo.get_ref(&branch.stc_base_refname()) {
                     g.delete_symref(&r.name)?;
@@ -189,7 +189,7 @@ impl<G: git::Git> Stc<G> {
         }
 
         let repo = g.snapshot()?;
-        for branch in g.tracked_branches()? {
+        for branch in repo.tracked_branches() {
             // for each existing branch that's somehow still being tracked:
             let base_symref_name = branch.stc_base_refname();
             let start_refname = branch.stc_start_refname();
