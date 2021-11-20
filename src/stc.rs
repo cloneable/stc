@@ -5,12 +5,12 @@ use ::std::string::String;
 use ::std::string::ToString;
 use ::std::vec::Vec;
 
-pub struct STC<'a> {
-    git: &'a dyn Git,
+pub struct STC<G: Git> {
+    git: G,
 }
 
-impl<'a> STC<'a> {
-    pub fn new(git: &'a dyn Git) -> Self {
+impl<G: Git> STC<G> {
+    pub fn new(git: G) -> Self {
         STC { git }
     }
 
@@ -28,7 +28,7 @@ impl<'a> STC<'a> {
     }
 
     pub fn clean(&self) -> Result<(), Status> {
-        let g = self.git;
+        let g = &self.git;
         g.config_unset_pattern("transfer.hideRefs", STACKER_REF_PREFIX)?;
         g.config_unset_pattern("log.excludeDecoration", STACKER_REF_PREFIX)?;
 
@@ -42,7 +42,7 @@ impl<'a> STC<'a> {
     }
 
     pub fn start(&self, name: String) -> Result<(), Status> {
-        let g = self.git;
+        let g = &self.git;
         g.snapshot()?;
         let base_branch = g.head()?;
         let new_name = g.check_branchname(&name)?;
@@ -60,7 +60,7 @@ impl<'a> STC<'a> {
     }
 
     pub fn push(&self) -> Result<(), Status> {
-        let g = self.git;
+        let g = &self.git;
 
         let expected_commit: ObjectName;
         {
@@ -90,7 +90,7 @@ impl<'a> STC<'a> {
     }
 
     pub fn rebase(&self) -> Result<(), Status> {
-        let g = self.git;
+        let g = &self.git;
 
         g.snapshot()?;
         let branch = g.head()?;
@@ -107,7 +107,7 @@ impl<'a> STC<'a> {
     }
 
     pub fn sync(&self) -> Result<(), Status> {
-        let g = self.git;
+        let g = &self.git;
 
         g.fetch_all_prune()?;
 
@@ -115,7 +115,7 @@ impl<'a> STC<'a> {
     }
 
     pub fn fix(&self, branch: Option<String>, base: Option<String>) -> Result<(), Status> {
-        let g = self.git;
+        let g = &self.git;
 
         // TODO: this is hacky. refactor.
         if let Some(branchname) = branch {
