@@ -69,14 +69,14 @@ impl Error for Status {
 pub trait Git {
     fn exec(&self, args: &[&str]) -> Result<Status, Status>;
 
-    fn head(&self) -> Result<BranchName, Status> {
-        todo!()
-    }
-
-    fn snapshot(&self) -> Result<HashMap<RefName, Ref>, Status> {
+    fn snapshot(&self) -> Result<Repository, Status> {
         let status = self.exec(&["for-each-ref", "--format", FIELD_FORMATS.join(",").as_str()])?;
-        parse_ref(status.stdout.as_slice())
-            .map_err(move |_err| Status::new(1, Default::default(), Default::default()))
+        let refs = parse_ref(status.stdout.as_slice()).map_err(move |_err| Status::with(1))?;
+        let head = refs
+            .values()
+            .find(move |r| r.head)
+            .map(move |r| r.name.branchname());
+        Ok(Repository { refs, head })
     }
 
     fn check_branchname<'a>(&self, name: &'a String) -> Result<BranchName<'a>, Status> {
@@ -222,10 +222,29 @@ pub trait Git {
     }
 }
 
+pub struct Repository<'a> {
+    refs: HashMap<RefName<'a>, Ref<'a>>,
+    head: Option<BranchName<'a>>,
+}
+
+impl<'a> Repository<'a> {
+    pub fn get_ref(&self, name: &'a RefName) -> Option<&'a Ref> {
+        self.refs.get(name)
+    }
+
+    pub fn head(&self) -> Option<&'a BranchName> {
+        self.head.as_ref()
+    }
+}
+
 #[derive(PartialEq, PartialOrd, Debug)]
 pub struct BranchName<'a>(Cow<'a, String>);
 
 impl<'a> BranchName<'a> {
+    const fn new(name: String) -> Self {
+        BranchName(Cow::Owned(name))
+    }
+
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
@@ -258,10 +277,15 @@ impl<'a> RefName<'a> {
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
+
+    pub fn branchname(&self) -> BranchName<'a> {
+        let (_, branchname) = self.0.rsplit_once("/").unwrap();
+        BranchName::new(branchname.to_string())
+    }
 }
 
 #[derive(Deserialize, PartialEq, PartialOrd, Clone, Debug)]
-pub struct ObjectName<'a>(Cow<'a, String>);
+pub struct ObjectName<'a>(pub Cow<'a, String>);
 
 impl<'a> ObjectName<'a> {
     pub const fn new(value: String) -> Self {
