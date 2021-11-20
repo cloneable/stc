@@ -27,12 +27,15 @@ impl<'a> Git for Runner<'a> {
 
         let output = cmd.wait_with_output().expect("failed to wait on git");
         if output.status.success() {
+            ::std::eprintln!("[OK] git {:?}", args);
             Ok(Status::new(0, output.stdout, output.stderr))
         } else {
             if let Some(code) = output.status.code() {
                 assert_ne!(code, 0);
+                ::std::eprintln!("[ERR {:?}] git {:?}", code, args);
                 Err(Status::new(code, output.stdout, output.stderr))
             } else {
+                ::std::eprintln!("[ERR] git {:?}", args);
                 Err(Status::new(1, output.stdout, output.stderr))
             }
         }
