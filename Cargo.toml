@@ -6,6 +6,8 @@ authors = ["Folke Behrens <folke@gmail.com>"]
 edition = "2021"
 repository = "https://github.com/cloneable/stc/"
 license = "Apache-2.0"
+categories = ["command-line-utilities", "development-tools"]
+keywords = ["git"]
 exclude = [".gitignore", ".github", "target"]
 
 [dependencies]
