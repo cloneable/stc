@@ -22,8 +22,9 @@ features = ["std", "derive"]
 
 [dev-dependencies]
 assert_cmd = "2.0.2"
+assert_fs = "1.0.6"
 phf = { version = "0.10.0", features = ["macros"] }
-tempfile = "3.2.0"
+predicates = "2.0.3"
 
 [profile.release]
 lto = true
