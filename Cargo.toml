@@ -12,13 +12,18 @@ exclude = [".gitignore", ".github", "target"]
 
 [dependencies]
 const_format = "0.2.22"
-serde = {version = "1.0.130", features = ["derive"]}
+serde = { version = "1.0.130", features = ["derive"] }
 csv = "1.1.6"
 
 [dependencies.clap]
 version = "3.0.0-beta.5"
 default-features = false
 features = ["std", "derive"]
+
+[dev-dependencies]
+assert_cmd = "2.0.2"
+phf = { version = "0.10.0", features = ["macros"] }
+tempfile = "3.2.0"
 
 [profile.release]
 lto = true
