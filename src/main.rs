@@ -3,9 +3,11 @@
 #![allow(dead_code)] // TODO: remove
 
 use ::clap::{self, Parser, Subcommand};
-use ::std::option::Option::{self, None, Some};
-use ::std::result::Result;
-use ::std::string::String;
+use ::std::{
+    option::Option::{self, None, Some},
+    result::Result,
+    string::String,
+};
 
 mod git;
 mod runner;
@@ -82,7 +84,7 @@ enum Command {
 fn main() -> Result<(), git::Status> {
     let root = Root::parse();
     let runner = runner::Runner::new("git");
-    let stc = stc::STC::new(runner);
+    let stc = stc::Stc::new(runner);
     match root.subcommand {
         Command::Clean => stc.clean(),
         Command::Fix { branch, base } => stc.fix(branch, base),

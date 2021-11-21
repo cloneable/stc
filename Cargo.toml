@@ -1,21 +1,30 @@
 [package]
 name = "stc"
 description = "[WIP] Easy stacking of dev branches in git repositories."
-version = "0.0.8"
+version = "0.1.0"
 authors = ["Folke Behrens <folke@gmail.com>"]
 edition = "2021"
 repository = "https://github.com/cloneable/stc/"
 license = "Apache-2.0"
+categories = ["command-line-utilities", "development-tools"]
+keywords = ["git"]
+exclude = [".gitignore", ".github", "target"]
 
 [dependencies]
 const_format = "0.2.22"
-serde = {version = "1.0.130", features = ["derive"]}
+serde = { version = "1.0.130", features = ["derive"] }
 csv = "1.1.6"
 
 [dependencies.clap]
 version = "3.0.0-beta.5"
 default-features = false
 features = ["std", "derive"]
+
+[dev-dependencies]
+assert_cmd = "2.0.2"
+assert_fs = "1.0.6"
+phf = { version = "0.10.0", features = ["macros"] }
+predicates = "2.0.3"
 
 [profile.release]
 lto = true

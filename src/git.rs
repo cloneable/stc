@@ -1,32 +1,31 @@
 use ::const_format::concatcp;
 use ::csv::ReaderBuilder;
 use ::serde::Deserialize;
-use ::std::borrow::Cow;
-use ::std::clone::Clone;
-use ::std::collections::HashMap;
-use ::std::convert::From;
-use ::std::default::Default;
-use ::std::error::Error;
-use ::std::format;
-use ::std::iter::IntoIterator;
-use ::std::iter::Iterator;
-use ::std::option::Option::{self, None};
-use ::std::result::Result::{self, Err, Ok};
-use ::std::string::String;
-use ::std::string::ToString;
-use ::std::todo;
-use ::std::vec::Vec;
-use ::std::write;
+use ::std::{
+    borrow::{Cow, ToOwned},
+    clone::Clone,
+    collections::{BTreeSet, HashMap},
+    convert::AsRef,
+    default::Default,
+    error::Error,
+    format,
+    iter::{IntoIterator, Iterator},
+    option::Option::{self, None},
+    result::Result::{self, Err, Ok},
+    string::{String, ToString},
+    vec::Vec,
+    write,
+};
 
-// TODO: use ObjectName as type for const if possibe
-pub const NON_EXISTANT_OBJECT: &'static str = "0000000000000000000000000000000000000000";
+pub const NON_EXISTANT_OBJECT: ObjectName<'static> =
+    ObjectName::new("0000000000000000000000000000000000000000");
 
-pub const STC_REF_PREFIX: &'static str = "refs/stc/";
-pub const STC_BASE_REF_PREFIX: &'static str = concatcp!(STC_REF_PREFIX, "base/");
-pub const STC_START_REF_PREFIX: &'static str = concatcp!(STC_REF_PREFIX, "start/");
-pub const STC_REMOTE_REF_PREFIX: &'static str = concatcp!(STC_REF_PREFIX, "remote/");
+pub const STC_REF_PREFIX: &str = "refs/stc/";
+pub const STC_BASE_REF_PREFIX: &str = concatcp!(STC_REF_PREFIX, "base/");
+pub const STC_START_REF_PREFIX: &str = concatcp!(STC_REF_PREFIX, "start/");
+pub const STC_REMOTE_REF_PREFIX: &str = concatcp!(STC_REF_PREFIX, "remote/");
 
-pub const BRANCH_REF_PREFIX: &'static str = "refs/heads/";
+pub const BRANCH_REF_PREFIX: &str = "refs/heads/";
 
 #[derive(Debug)]
 pub struct Status {
@@ -71,27 +70,26 @@ pub trait Git {
 
     fn snapshot(&self) -> Result<Repository, Status> {
         let status = self.exec(&["for-each-ref", "--format", FIELD_FORMATS.join(",").as_str()])?;
-        let refs = parse_ref(status.stdout.as_slice()).map_err(move |_err| Status::with(1))?;
+        let refs = parse_ref(status.stdout.as_slice()).map_err(|_err| Status::with(1))?;
         let head = refs
             .values()
-            .find(move |r| r.head)
-            .map(move |r| r.name.branchname());
+            .find(|r| r.head)
+            .map(|r| r.name.branchname().owning_clone());
         Ok(Repository { refs, head })
     }
 
-    fn check_branchname<'a>(&self, name: &'a String) -> Result<BranchName<'a>, Status> {
+    fn check_branchname<'a>(&self, name: &'a str) -> Result<BranchName<'a>, Status> {
         self.exec(&["check-ref-format", "--branch", name])?;
-        Ok(BranchName(Cow::Borrowed(name)))
+        Ok(BranchName(Cow::Owned(name.to_string())))
     }
 
     fn create_branch(&self, name: &BranchName, base: &BranchName) -> Result<(), Status> {
         self.exec(&["branch", "--create-reflog", name.as_str(), base.as_str()])
-            .map(move |_| -> () {})
+            .map(|_| {})
     }
 
     fn switch_branch(&self, b: &BranchName) -> Result<(), Status> {
-        self.exec(&["switch", "--no-guess", b.as_str()])
-            .map(move |_| -> () {})
+        self.exec(&["switch", "--no-guess", b.as_str()]).map(|_| {})
     }
 
     fn create_symref(
@@ -101,12 +99,12 @@ pub trait Git {
         reason: &'static str,
     ) -> Result<(), Status> {
         self.exec(&["symbolic-ref", "-m", reason, name.as_str(), target.as_str()])
-            .map(move |_| -> () {})
+            .map(|_| {})
     }
 
     fn delete_symref(&self, name: &RefName) -> Result<(), Status> {
         self.exec(&["symbolic-ref", "--delete", name.as_str()])
-            .map(move |_| -> () {})
+            .map(|_| {})
     }
 
     fn create_ref(&self, name: &RefName, commit: &ObjectName) -> Result<(), Status> {
@@ -116,9 +114,9 @@ pub trait Git {
             "--create-reflog",
             name.as_str(),
             commit.as_str(),
-            NON_EXISTANT_OBJECT,
+            NON_EXISTANT_OBJECT.as_str(),
         ])
-        .map(move |_| -> () {})
+        .map(|_| {})
     }
 
     fn update_ref(
@@ -135,7 +133,7 @@ pub trait Git {
             new_commit.as_str(),
             cur_commit.as_str(),
         ])
-        .map(move |_| -> () {})
+        .map(|_| {})
     }
 
     fn delete_ref(&self, name: &RefName, cur_commit: &ObjectName) -> Result<(), Status> {
@@ -146,7 +144,7 @@ pub trait Git {
             name.as_str(),
             cur_commit.as_str(),
         ])
-        .map(move |_| -> () {})
+        .map(|_| {})
     }
 
     fn rebase_onto(&self, name: &BranchName) -> Result<(), Status> {
@@ -158,7 +156,7 @@ pub trait Git {
             name.stc_start_refname().as_str(),
             name.as_str(),
         ])
-        .map(move |_| -> () {})
+        .map(|_| {})
     }
 
     fn push(
@@ -174,17 +172,16 @@ pub trait Git {
             remote.as_str(),
             format!("{}:{}", name.as_str(), name.as_str()).as_str(),
         ])
-        .map(move |_| -> () {})
+        .map(|_| {})
     }
 
     fn config_set(&self, key: &str, value: &str) -> Result<(), Status> {
-        self.exec(&["config", "--local", key, value])
-            .map(move |_| -> () {})
+        self.exec(&["config", "--local", key, value]).map(|_| {})
     }
 
     fn config_add(&self, key: &str, value: &str) -> Result<(), Status> {
         self.exec(&["config", "--local", "--add", key, value])
-            .map(move |_| -> () {})
+            .map(|_| {})
     }
 
     fn config_unset_pattern(&self, key: &str, pattern: &str) -> Result<(), Status> {
@@ -203,12 +200,7 @@ pub trait Git {
     }
 
     fn fetch_all_prune(&self) -> Result<(), Status> {
-        self.exec(&["fetch", "--all", "--prune"])
-            .map(move |_| -> () {})
-    }
-
-    fn tracked_branches(&self) -> Result<Vec<BranchName>, Status> {
-        todo!()
+        self.exec(&["fetch", "--all", "--prune"]).map(|_| {})
     }
 
     fn forkpoint(&self, base: &RefName, branch: &RefName) -> Result<ObjectName, Status> {
@@ -235,18 +227,32 @@ impl<'a> Repository<'a> {
     pub fn head(&self) -> Option<&'a BranchName> {
         self.head.as_ref()
     }
+
+    pub fn tracked_branches(&self) -> Vec<BranchName> {
+        self.refs
+            .iter()
+            .filter(|(name, _)| name.0.starts_with(STC_REF_PREFIX))
+            .map(|(name, _)| name.branchname())
+            .collect::<BTreeSet<BranchName>>()
+            .into_iter()
+            .collect()
+    }
 }
 
-#[derive(PartialEq, PartialOrd, Debug)]
-pub struct BranchName<'a>(Cow<'a, String>);
+#[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub struct BranchName<'a>(Cow<'a, str>);
 
 impl<'a> BranchName<'a> {
-    const fn new(name: String) -> Self {
-        BranchName(Cow::Owned(name))
+    pub const fn new(name: &'a str) -> Self {
+        BranchName(Cow::Borrowed(name))
+    }
+
+    pub fn owning_clone<'b: 'a>(&'a self) -> BranchName<'b> {
+        BranchName(Cow::Owned(self.0.as_ref().to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 
     pub fn refname(&self) -> RefName {
@@ -267,46 +273,58 @@ impl<'a> BranchName<'a> {
 }
 
 #[derive(Deserialize, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct RefName<'a>(Cow<'a, String>);
+pub struct RefName<'a>(Cow<'a, str>);
 
 impl<'a> RefName<'a> {
-    const fn new(name: String) -> Self {
-        RefName(Cow::Owned(name))
+    pub const fn new(name: &'a str) -> Self {
+        RefName(Cow::Borrowed(name))
+    }
+
+    pub fn owning_clone<'b: 'a>(&'a self) -> RefName<'b> {
+        RefName(Cow::Owned(self.0.as_ref().to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 
-    pub fn branchname(&self) -> BranchName<'a> {
+    pub fn branchname(&'a self) -> BranchName<'a> {
         let (_, branchname) = self.0.rsplit_once("/").unwrap();
-        BranchName::new(branchname.to_string())
+        BranchName::new(branchname)
     }
 }
 
 #[derive(Deserialize, PartialEq, PartialOrd, Clone, Debug)]
-pub struct ObjectName<'a>(pub Cow<'a, String>);
+pub struct ObjectName<'a>(pub Cow<'a, str>);
 
 impl<'a> ObjectName<'a> {
-    pub const fn new(value: String) -> Self {
-        ObjectName(Cow::Owned(value))
+    pub const fn new(name: &'a str) -> Self {
+        ObjectName(Cow::Borrowed(name))
+    }
+
+    pub fn owning_clone<'b: 'a>(&'a self) -> ObjectName<'b> {
+        ObjectName(Cow::Owned(self.0.as_ref().to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 }
 
 #[derive(Deserialize, PartialEq, PartialOrd, Debug)]
-pub struct RemoteName<'a>(Cow<'a, String>);
+pub struct RemoteName<'a>(Cow<'a, str>);
 
 impl<'a> RemoteName<'a> {
-    const fn new(value: String) -> Self {
-        RemoteName(Cow::Owned(value))
+    pub const fn new(name: &'a str) -> Self {
+        RemoteName(Cow::Borrowed(name))
+    }
+
+    pub fn owning_clone<'b: 'a>(&'a self) -> RemoteName<'b> {
+        RemoteName(Cow::Owned(self.0.as_ref().to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 }
 
@@ -332,7 +350,7 @@ pub struct Ref<'a> {
     pub upstream_refname: RefName<'a>,
 }
 
-const FIELD_FORMATS: [&'static str; 9] = [
+const FIELD_FORMATS: [&str; 9] = [
     "%(refname)",                                // name
     "%(if)%(HEAD)%(then)true%(else)false%(end)", // head
     "%(objectname)",                             // objectname
@@ -365,6 +383,7 @@ fn parse_ref<'a, R: ::std::io::Read + ::std::fmt::Debug>(
 mod tests {
     use super::*;
     use ::std::assert_eq;
+    use ::std::convert::From;
 
     #[test]
     fn test_parse_ref() {
@@ -374,18 +393,17 @@ refs/heads/moo1,true,123abc,commit,<>,origin,refs/heads/moo,,refs/remotes/origin
         let refs = parse_ref(csv.as_bytes()).expect("cannot parse");
         assert_eq!(refs.len(), 1);
         assert_eq!(
-            refs.get(&RefName::new("refs/heads/moo1".to_string()))
-                .unwrap(),
+            refs.get(&RefName::new("refs/heads/moo1")).unwrap(),
             &Ref {
-                name: RefName::new("refs/heads/moo1".to_string()),
+                name: RefName::new("refs/heads/moo1"),
                 head: true,
-                objectname: ObjectName::new("123abc".to_string()),
+                objectname: ObjectName::new("123abc"),
                 objecttype: RefType::Commit,
                 track: String::from("<>"),
-                remote: RemoteName::new("origin".to_string()),
-                remote_refname: RefName::new("refs/heads/moo".to_string()),
-                symref_target: RefName::new("".to_string()),
-                upstream_refname: RefName::new("refs/remotes/origin/moo".to_string()),
+                remote: RemoteName::new("origin"),
+                remote_refname: RefName::new("refs/heads/moo"),
+                symref_target: RefName::new(""),
+                upstream_refname: RefName::new("refs/remotes/origin/moo"),
             }
         )
     }

@@ -1,23 +1,24 @@
-use crate::git::*;
-use ::std::option::Option::{self, Some};
-use ::std::result::Result::{self, Err, Ok};
-use ::std::string::String;
-use ::std::string::ToString;
-use ::std::vec::Vec;
+use crate::git;
+use ::std::{
+    option::Option::{self, Some},
+    result::Result::{self, Err, Ok},
+    string::String,
+    vec::Vec,
+};
 
-pub struct STC<G: Git> {
+pub struct Stc<G: git::Git> {
     git: G,
 }
 
-impl<G: Git> STC<G> {
+impl<G: git::Git> Stc<G> {
     pub fn new(git: G) -> Self {
-        STC { git }
+        Stc { git }
     }
 
-    pub fn init(&self) -> Result<(), Status> {
+    pub fn init(&self) -> Result<(), git::Status> {
         let g = &self.git;
-        g.config_add("transfer.hideRefs", STC_REF_PREFIX)?;
-        g.config_add("log.excludeDecoration", STC_REF_PREFIX)?;
+        g.config_add("transfer.hideRefs", git::STC_REF_PREFIX)?;
+        g.config_add("log.excludeDecoration", git::STC_REF_PREFIX)?;
 
         // TODO: read refs, branches, remotes
         // TODO: validate stc refs against branches
@@ -27,10 +28,10 @@ impl<G: Git> STC<G> {
         Ok(())
     }
 
-    pub fn clean(&self) -> Result<(), Status> {
+    pub fn clean(&self) -> Result<(), git::Status> {
         let g = &self.git;
-        g.config_unset_pattern("transfer.hideRefs", STC_REF_PREFIX)?;
-        g.config_unset_pattern("log.excludeDecoration", STC_REF_PREFIX)?;
+        g.config_unset_pattern("transfer.hideRefs", git::STC_REF_PREFIX)?;
+        g.config_unset_pattern("log.excludeDecoration", git::STC_REF_PREFIX)?;
 
         // TODO: for each branch
         // TODO: ... check if fully merged
@@ -41,10 +42,10 @@ impl<G: Git> STC<G> {
         Ok(())
     }
 
-    pub fn start(&self, name: String) -> Result<(), Status> {
+    pub fn start(&self, name: String) -> Result<(), git::Status> {
         let g = &self.git;
         let repo = g.snapshot()?;
-        let base_branch = repo.head().ok_or(Status::with(1))?;
+        let base_branch = repo.head().ok_or_else(|| git::Status::with(1))?;
         let new_name = g.check_branchname(&name)?;
         g.create_branch(&new_name, base_branch)?;
         g.switch_branch(&new_name)?;
@@ -54,38 +55,42 @@ impl<G: Git> STC<G> {
             "stc: base branch marker",
         )?;
         let base_refname = base_branch.refname();
-        let base_ref = repo.get_ref(&base_refname).ok_or(Status::with(1))?;
+        let base_ref = repo
+            .get_ref(&base_refname)
+            .ok_or_else(|| git::Status::with(1))?;
         g.create_ref(&new_name.stc_start_refname(), &base_ref.objectname)?;
 
         Ok(())
     }
 
-    pub fn push(&self) -> Result<(), Status> {
+    pub fn push(&self) -> Result<(), git::Status> {
         let g = &self.git;
 
-        let expected_commit: ObjectName;
+        let expected_commit: git::ObjectName;
         {
             let repo = g.snapshot()?;
-            let cur_branch = repo.head().ok_or(Status::with(1))?;
+            let cur_branch = repo.head().ok_or_else(|| git::Status::with(1))?;
             let stc_base_refname = cur_branch.stc_base_refname();
-            let base_symref = repo.get_ref(&stc_base_refname).ok_or(Status::with(1))?;
+            let base_symref = repo
+                .get_ref(&stc_base_refname)
+                .ok_or_else(|| git::Status::with(1))?;
             let base_ref = repo
                 .get_ref(&base_symref.symref_target)
-                .ok_or(Status::with(1))?;
+                .ok_or_else(|| git::Status::with(1))?;
             if let Some(remote_ref) = repo.get_ref(&cur_branch.stc_remote_refname()) {
-                // use ::std::borrow::ToOwned;
-                expected_commit = ObjectName::new(remote_ref.objectname.0.to_string());
-            // TODO: clean clone
+                expected_commit = remote_ref.objectname.owning_clone();
             } else {
-                expected_commit = ObjectName::new(NON_EXISTANT_OBJECT.to_string());
+                expected_commit = git::NON_EXISTANT_OBJECT;
             }
-            g.push(&cur_branch, &base_ref.remote, &expected_commit)?;
+            g.push(cur_branch, &base_ref.remote, &expected_commit)?;
         }
         {
             let repo = g.snapshot()?;
-            let cur_branch = repo.head().ok_or(Status::with(1))?;
+            let cur_branch = repo.head().ok_or_else(|| git::Status::with(1))?;
             let cur_refname = cur_branch.refname();
-            let cur_ref = repo.get_ref(&cur_refname).ok_or(Status::with(1))?;
+            let cur_ref = repo
+                .get_ref(&cur_refname)
+                .ok_or_else(|| git::Status::with(1))?;
             g.update_ref(
                 &cur_branch.stc_remote_refname(),
                 &cur_ref.objectname,
@@ -96,16 +101,20 @@ impl<G: Git> STC<G> {
         Ok(())
     }
 
-    pub fn rebase(&self) -> Result<(), Status> {
+    pub fn rebase(&self) -> Result<(), git::Status> {
         let g = &self.git;
 
         let repo = g.snapshot()?;
-        let branch = repo.head().ok_or(Status::with(1))?;
+        let branch = repo.head().ok_or_else(|| git::Status::with(1))?;
         let stc_base_refname = branch.stc_base_refname();
         let stc_start_refname = branch.stc_start_refname();
-        let base_ref = repo.get_ref(&stc_base_refname).ok_or(Status::with(1))?;
-        let start_ref = repo.get_ref(&stc_start_refname).ok_or(Status::with(1))?;
-        g.rebase_onto(&branch)?;
+        let base_ref = repo
+            .get_ref(&stc_base_refname)
+            .ok_or_else(|| git::Status::with(1))?;
+        let start_ref = repo
+            .get_ref(&stc_start_refname)
+            .ok_or_else(|| git::Status::with(1))?;
+        g.rebase_onto(branch)?;
         g.update_ref(
             &branch.stc_start_refname(),
             &base_ref.objectname,
@@ -115,7 +124,7 @@ impl<G: Git> STC<G> {
         Ok(())
     }
 
-    pub fn sync(&self) -> Result<(), Status> {
+    pub fn sync(&self) -> Result<(), git::Status> {
         let g = &self.git;
 
         g.fetch_all_prune()?;
@@ -123,7 +132,7 @@ impl<G: Git> STC<G> {
         Ok(())
     }
 
-    pub fn fix(&self, branch: Option<String>, base: Option<String>) -> Result<(), Status> {
+    pub fn fix(&self, branch: Option<String>, base: Option<String>) -> Result<(), git::Status> {
         let g = &self.git;
 
         let repo = g.snapshot()?;
@@ -134,7 +143,7 @@ impl<G: Git> STC<G> {
                 let base_branch = g.check_branchname(&base_branchname)?;
                 if let Some(base_symref) = repo.get_ref(&branch.stc_base_refname()) {
                     if base_symref.symref_target != base_branch.refname() {
-                        return Err(Status::new(
+                        return Err(git::Status::new(
                             1,
                             Vec::<u8>::new(),
                             "base branch already defined".as_bytes().to_vec(),
@@ -154,7 +163,7 @@ impl<G: Git> STC<G> {
                     g.create_ref(&branch.stc_start_refname(), &forkpoint)?;
                 }
             } else {
-                return Err(Status::new(
+                return Err(git::Status::new(
                     1,
                     Vec::<u8>::new(),
                     "base not specified".as_bytes().to_vec(),
@@ -163,7 +172,7 @@ impl<G: Git> STC<G> {
         }
 
         let repo = g.snapshot()?;
-        for branch in g.tracked_branches()? {
+        for branch in repo.tracked_branches() {
             if repo.get_ref(&branch.refname()).is_none() {
                 if let Some(r) = repo.get_ref(&branch.stc_base_refname()) {
                     g.delete_symref(&r.name)?;
@@ -178,7 +187,7 @@ impl<G: Git> STC<G> {
         }
 
         let repo = g.snapshot()?;
-        for branch in g.tracked_branches()? {
+        for branch in repo.tracked_branches() {
             // for each existing branch that's somehow still being tracked:
             let base_symref_name = branch.stc_base_refname();
             let start_refname = branch.stc_start_refname();

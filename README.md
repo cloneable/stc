@@ -64,7 +64,7 @@ cargo install --git https://github.com/cloneable/stc
 ## Usage
 
 ```
-stc 0.0.8
+stc 0.1.0
 
 [WIP] Easy stacking of dev branches in git repositories.
 
