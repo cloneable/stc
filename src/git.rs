@@ -2,9 +2,10 @@ use ::const_format::concatcp;
 use ::csv::ReaderBuilder;
 use ::serde::Deserialize;
 use ::std::{
-    borrow::Cow,
+    borrow::{Cow, ToOwned},
     clone::Clone,
     collections::{BTreeSet, HashMap},
+    convert::AsRef,
     default::Default,
     error::Error,
     format,
@@ -16,8 +17,8 @@ use ::std::{
     write,
 };
 
-// TODO: use ObjectName as type for const if possibe
-pub const NON_EXISTANT_OBJECT: &str = "0000000000000000000000000000000000000000";
+pub const NON_EXISTANT_OBJECT: ObjectName<'static> =
+    ObjectName::new("0000000000000000000000000000000000000000");
 
 pub const STC_REF_PREFIX: &str = "refs/stc/";
 pub const STC_BASE_REF_PREFIX: &str = concatcp!(STC_REF_PREFIX, "base/");
@@ -70,7 +71,10 @@ pub trait Git {
     fn snapshot(&self) -> Result<Repository, Status> {
         let status = self.exec(&["for-each-ref", "--format", FIELD_FORMATS.join(",").as_str()])?;
         let refs = parse_ref(status.stdout.as_slice()).map_err(|_err| Status::with(1))?;
-        let head = refs.values().find(|r| r.head).map(|r| r.name.branchname());
+        let head = refs
+            .values()
+            .find(|r| r.head)
+            .map(|r| r.name.branchname().owning_clone());
         Ok(Repository { refs, head })
     }
 
@@ -110,7 +114,7 @@ pub trait Git {
             "--create-reflog",
             name.as_str(),
             commit.as_str(),
-            NON_EXISTANT_OBJECT,
+            NON_EXISTANT_OBJECT.as_str(),
         ])
         .map(|_| {})
     }
@@ -236,15 +240,19 @@ impl<'a> Repository<'a> {
 }
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct BranchName<'a>(Cow<'a, String>);
+pub struct BranchName<'a>(Cow<'a, str>);
 
 impl<'a> BranchName<'a> {
-    const fn new(name: String) -> Self {
-        BranchName(Cow::Owned(name))
+    pub const fn new(name: &'a str) -> Self {
+        BranchName(Cow::Borrowed(name))
+    }
+
+    pub fn owning_clone<'b: 'a>(&'a self) -> BranchName<'b> {
+        BranchName(Cow::Owned(self.0.as_ref().to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 
     pub fn refname(&self) -> RefName {
@@ -265,46 +273,58 @@ impl<'a> BranchName<'a> {
 }
 
 #[derive(Deserialize, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct RefName<'a>(Cow<'a, String>);
+pub struct RefName<'a>(Cow<'a, str>);
 
 impl<'a> RefName<'a> {
-    const fn new(name: String) -> Self {
-        RefName(Cow::Owned(name))
+    pub const fn new(name: &'a str) -> Self {
+        RefName(Cow::Borrowed(name))
+    }
+
+    pub fn owning_clone<'b: 'a>(&'a self) -> RefName<'b> {
+        RefName(Cow::Owned(self.0.as_ref().to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 
-    pub fn branchname(&self) -> BranchName<'a> {
+    pub fn branchname(&'a self) -> BranchName<'a> {
         let (_, branchname) = self.0.rsplit_once("/").unwrap();
-        BranchName::new(branchname.to_string())
+        BranchName::new(branchname)
     }
 }
 
 #[derive(Deserialize, PartialEq, PartialOrd, Clone, Debug)]
-pub struct ObjectName<'a>(pub Cow<'a, String>);
+pub struct ObjectName<'a>(pub Cow<'a, str>);
 
 impl<'a> ObjectName<'a> {
-    pub const fn new(value: String) -> Self {
-        ObjectName(Cow::Owned(value))
+    pub const fn new(name: &'a str) -> Self {
+        ObjectName(Cow::Borrowed(name))
+    }
+
+    pub fn owning_clone<'b: 'a>(&'a self) -> ObjectName<'b> {
+        ObjectName(Cow::Owned(self.0.as_ref().to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 }
 
 #[derive(Deserialize, PartialEq, PartialOrd, Debug)]
-pub struct RemoteName<'a>(Cow<'a, String>);
+pub struct RemoteName<'a>(Cow<'a, str>);
 
 impl<'a> RemoteName<'a> {
-    const fn new(value: String) -> Self {
-        RemoteName(Cow::Owned(value))
+    pub const fn new(name: &'a str) -> Self {
+        RemoteName(Cow::Borrowed(name))
+    }
+
+    pub fn owning_clone<'b: 'a>(&'a self) -> RemoteName<'b> {
+        RemoteName(Cow::Owned(self.0.as_ref().to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 }
 
@@ -373,18 +393,17 @@ refs/heads/moo1,true,123abc,commit,<>,origin,refs/heads/moo,,refs/remotes/origin
         let refs = parse_ref(csv.as_bytes()).expect("cannot parse");
         assert_eq!(refs.len(), 1);
         assert_eq!(
-            refs.get(&RefName::new("refs/heads/moo1".to_string()))
-                .unwrap(),
+            refs.get(&RefName::new("refs/heads/moo1")).unwrap(),
             &Ref {
-                name: RefName::new("refs/heads/moo1".to_string()),
+                name: RefName::new("refs/heads/moo1"),
                 head: true,
-                objectname: ObjectName::new("123abc".to_string()),
+                objectname: ObjectName::new("123abc"),
                 objecttype: RefType::Commit,
                 track: String::from("<>"),
-                remote: RemoteName::new("origin".to_string()),
-                remote_refname: RefName::new("refs/heads/moo".to_string()),
-                symref_target: RefName::new("".to_string()),
-                upstream_refname: RefName::new("refs/remotes/origin/moo".to_string()),
+                remote: RemoteName::new("origin"),
+                remote_refname: RefName::new("refs/heads/moo"),
+                symref_target: RefName::new(""),
+                upstream_refname: RefName::new("refs/remotes/origin/moo"),
             }
         )
     }

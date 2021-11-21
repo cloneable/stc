@@ -2,7 +2,7 @@ use crate::git;
 use ::std::{
     option::Option::{self, Some},
     result::Result::{self, Err, Ok},
-    string::{String, ToString},
+    string::String,
     vec::Vec,
 };
 
@@ -78,11 +78,9 @@ impl<G: git::Git> Stc<G> {
                 .get_ref(&base_symref.symref_target)
                 .ok_or_else(|| git::Status::with(1))?;
             if let Some(remote_ref) = repo.get_ref(&cur_branch.stc_remote_refname()) {
-                // use ::std::borrow::ToOwned;
-                expected_commit = git::ObjectName::new(remote_ref.objectname.0.to_string());
-            // TODO: clean clone
+                expected_commit = remote_ref.objectname.owning_clone();
             } else {
-                expected_commit = git::ObjectName::new(git::NON_EXISTANT_OBJECT.to_string());
+                expected_commit = git::NON_EXISTANT_OBJECT;
             }
             g.push(cur_branch, &base_ref.remote, &expected_commit)?;
         }
