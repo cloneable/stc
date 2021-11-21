@@ -21,8 +21,8 @@ impl<'a> git::Git for Runner<'a> {
         let cmd = Command::new(self.gitpath)
             .args(args)
             .stdin(Stdio::null())
-            .stdin(Stdio::piped())
             .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()
             .expect("failed to start git");
 
