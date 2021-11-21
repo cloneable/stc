@@ -1,18 +1,26 @@
 use crate::git;
 use ::std::{
     assert_ne,
+    collections::HashMap,
     option::Option::Some,
+    path::PathBuf,
     process::{Command, Stdio},
     result::Result::{self, Err, Ok},
 };
 
 pub struct Runner<'a> {
     gitpath: &'a str,
+    workdir: PathBuf,
+    env: HashMap<&'a str, &'a str>,
 }
 
 impl<'a> Runner<'a> {
     pub fn new(gitpath: &'a str) -> Self {
-        Runner { gitpath }
+        Runner {
+            gitpath,
+            workdir: ::std::env::current_dir().expect("cannot determine current working directory"),
+            env: HashMap::<&'a str, &'a str>::new(),
+        }
     }
 }
 
@@ -20,6 +28,8 @@ impl<'a> git::Git for Runner<'a> {
     fn exec(&self, args: &[&str]) -> Result<git::Status, git::Status> {
         let cmd = Command::new(self.gitpath)
             .args(args)
+            .current_dir(&self.workdir)
+            .envs(self.env.iter())
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
