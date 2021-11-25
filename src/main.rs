@@ -2,10 +2,10 @@
 #![allow(missing_docs)] // TODO: change to warn/deny
 #![allow(dead_code)] // TODO: remove
 
+use ::anyhow::Result;
 use ::clap::{self, Parser, Subcommand};
 use ::std::{
     option::Option::{self, None, Some},
-    result::Result,
     string::String,
 };
 
@@ -81,9 +81,9 @@ enum Command {
     Sync,
 }
 
-fn main() -> Result<(), git::Status> {
+fn main() -> Result<()> {
     let root = Root::parse();
-    let runner = runner::Runner::new("git");
+    let runner = runner::Runner::new("git")?;
     let stc = stc::Stc::new(runner);
     match root.subcommand {
         Command::Clean => stc.clean(),

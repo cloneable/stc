@@ -1,21 +1,22 @@
+use ::anyhow::Result;
 use ::const_format::concatcp;
 use ::csv::ReaderBuilder;
 use ::serde::Deserialize;
 use ::std::{
+    self,
     borrow::{Cow, ToOwned},
     clone::Clone,
     collections::{BTreeSet, HashMap},
-    convert::AsRef,
-    default::Default,
-    error::Error,
+    convert::{AsRef, Into},
     format,
     iter::{IntoIterator, Iterator},
-    option::Option::{self, None},
-    result::Result::{self, Err, Ok},
+    option::Option::{self, Some},
+    result::Result::{Err, Ok},
     string::{String, ToString},
     vec::Vec,
     write,
 };
+use ::thiserror::Error;
 
 pub const NON_EXISTANT_OBJECT: ObjectName<'static> =
     ObjectName::new("0000000000000000000000000000000000000000");
@@ -27,50 +28,46 @@ pub const STC_REMOTE_REF_PREFIX: &str = concatcp!(STC_REF_PREFIX, "remote/");
 
 pub const BRANCH_REF_PREFIX: &str = "refs/heads/";
 
-#[derive(Debug)]
-pub struct Status {
+#[derive(Error, Debug)]
+#[error("exitcode={exitcode:?}, stdout={stdout:?}, stderr={stderr:?}")]
+pub struct ExecStatus {
     pub exitcode: i32,
-    pub stdout: Vec<u8>,
-    pub stderr: Vec<u8>,
+    pub stdout: String,
+    pub stderr: String,
 }
 
-impl Status {
-    pub fn new(exitcode: i32, stdout: Vec<u8>, stderr: Vec<u8>) -> Self {
-        Status {
+impl ExecStatus {
+    pub fn new(exitcode: i32, stdout: String, stderr: String) -> Self {
+        ExecStatus {
             exitcode,
             stdout,
             stderr,
         }
     }
 
-    pub fn with(exitcode: i32) -> Self {
-        Status {
+    pub fn from(exitcode: i32, stdout: Vec<u8>, stderr: Vec<u8>) -> Self {
+        // TODO: use OsString.
+        ExecStatus {
             exitcode,
-            stdout: Default::default(),
-            stderr: Default::default(),
+            stdout: String::from_utf8_lossy(stdout.as_slice()).to_string(),
+            stderr: String::from_utf8_lossy(stderr.as_slice()).to_string(),
+        }
+    }
+
+    pub fn result(self) -> Result<()> {
+        match self.exitcode {
+            0 => Ok(()),
+            _ => Err(self.into()),
         }
     }
 }
 
-impl ::std::fmt::Display for Status {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        write!(f, "SuperError is here!")
-    }
-}
-
-impl Error for Status {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        // XXX
-        None //Some(&self.side)
-    }
-}
-
 pub trait Git {
-    fn exec(&self, args: &[&str]) -> Result<Status, Status>;
+    fn exec(&self, args: &[&str]) -> Result<ExecStatus>;
 
-    fn snapshot(&self) -> Result<Repository, Status> {
+    fn snapshot(&self) -> Result<Repository> {
         let status = self.exec(&["for-each-ref", "--format", FIELD_FORMATS.join(",").as_str()])?;
-        let refs = parse_ref(status.stdout.as_slice()).map_err(|_err| Status::with(1))?;
+        let refs = parse_ref(status.stdout.as_bytes())?;
         let head = refs
             .values()
             .find(|r| r.head)
@@ -78,36 +75,31 @@ pub trait Git {
         Ok(Repository { refs, head })
     }
 
-    fn check_branchname<'a>(&self, name: &'a str) -> Result<BranchName<'a>, Status> {
+    fn check_branchname<'a>(&self, name: &'a str) -> Result<BranchName<'a>> {
         self.exec(&["check-ref-format", "--branch", name])?;
         Ok(BranchName(Cow::Owned(name.to_string())))
     }
 
-    fn create_branch(&self, name: &BranchName, base: &BranchName) -> Result<(), Status> {
+    fn create_branch(&self, name: &BranchName, base: &BranchName) -> Result<()> {
         self.exec(&["branch", "--create-reflog", name.as_str(), base.as_str()])
             .map(|_| {})
     }
 
-    fn switch_branch(&self, b: &BranchName) -> Result<(), Status> {
+    fn switch_branch(&self, b: &BranchName) -> Result<()> {
         self.exec(&["switch", "--no-guess", b.as_str()]).map(|_| {})
     }
 
-    fn create_symref(
-        &self,
-        name: &RefName,
-        target: &RefName,
-        reason: &'static str,
-    ) -> Result<(), Status> {
+    fn create_symref(&self, name: &RefName, target: &RefName, reason: &'static str) -> Result<()> {
         self.exec(&["symbolic-ref", "-m", reason, name.as_str(), target.as_str()])
             .map(|_| {})
     }
 
-    fn delete_symref(&self, name: &RefName) -> Result<(), Status> {
+    fn delete_symref(&self, name: &RefName) -> Result<()> {
         self.exec(&["symbolic-ref", "--delete", name.as_str()])
             .map(|_| {})
     }
 
-    fn create_ref(&self, name: &RefName, commit: &ObjectName) -> Result<(), Status> {
+    fn create_ref(&self, name: &RefName, commit: &ObjectName) -> Result<()> {
         self.exec(&[
             "update-ref",
             "--no-deref",
@@ -124,7 +116,7 @@ pub trait Git {
         name: &RefName,
         new_commit: &ObjectName,
         cur_commit: &ObjectName,
-    ) -> Result<(), Status> {
+    ) -> Result<()> {
         self.exec(&[
             "update-ref",
             "--no-deref",
@@ -136,7 +128,7 @@ pub trait Git {
         .map(|_| {})
     }
 
-    fn delete_ref(&self, name: &RefName, cur_commit: &ObjectName) -> Result<(), Status> {
+    fn delete_ref(&self, name: &RefName, cur_commit: &ObjectName) -> Result<()> {
         self.exec(&[
             "update-ref",
             "--no-deref",
@@ -147,7 +139,7 @@ pub trait Git {
         .map(|_| {})
     }
 
-    fn rebase_onto(&self, name: &BranchName) -> Result<(), Status> {
+    fn rebase_onto(&self, name: &BranchName) -> Result<()> {
         self.exec(&[
             "rebase",
             "--committer-date-is-author-date",
@@ -159,12 +151,7 @@ pub trait Git {
         .map(|_| {})
     }
 
-    fn push(
-        &self,
-        name: &BranchName,
-        remote: &RemoteName,
-        expect: &ObjectName,
-    ) -> Result<(), Status> {
+    fn push(&self, name: &BranchName, remote: &RemoteName, expect: &ObjectName) -> Result<()> {
         self.exec(&[
             "push",
             "--set-upstream",
@@ -175,16 +162,16 @@ pub trait Git {
         .map(|_| {})
     }
 
-    fn config_set(&self, key: &str, value: &str) -> Result<(), Status> {
+    fn config_set(&self, key: &str, value: &str) -> Result<()> {
         self.exec(&["config", "--local", key, value]).map(|_| {})
     }
 
-    fn config_add(&self, key: &str, value: &str) -> Result<(), Status> {
+    fn config_add(&self, key: &str, value: &str) -> Result<()> {
         self.exec(&["config", "--local", "--add", key, value])
             .map(|_| {})
     }
 
-    fn config_unset_pattern(&self, key: &str, pattern: &str) -> Result<(), Status> {
+    fn config_unset_pattern(&self, key: &str, pattern: &str) -> Result<()> {
         match self.exec(&[
             "config",
             "--local",
@@ -194,22 +181,23 @@ pub trait Git {
             pattern,
         ]) {
             // 5 means the nothing matched.
-            Err(status) if status.exitcode != 5 => Err(status),
+            Err(err) => match err.downcast_ref::<ExecStatus>() {
+                Some(status) if status.exitcode != 5 => Err(err),
+                _ => Ok(()),
+            },
             _ => Ok(()),
         }
     }
 
-    fn fetch_all_prune(&self) -> Result<(), Status> {
+    fn fetch_all_prune(&self) -> Result<()> {
         self.exec(&["fetch", "--all", "--prune"]).map(|_| {})
     }
 
-    fn forkpoint(&self, base: &RefName, branch: &RefName) -> Result<ObjectName, Status> {
+    fn forkpoint(&self, base: &RefName, branch: &RefName) -> Result<ObjectName> {
         self.exec(&["merge-base", "--fork-point", base.as_str(), branch.as_str()])
             .map(move |status| {
                 // TODO: handle not found
-                ObjectName(Cow::Owned(
-                    String::from_utf8_lossy(&status.stdout).to_string(),
-                ))
+                ObjectName(Cow::Owned(status.stdout))
             })
     }
 }
