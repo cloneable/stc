@@ -1,7 +1,7 @@
 [package]
 name = "stc"
 description = "[WIP] Easy stacking of dev branches in git repositories."
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Folke Behrens <folke@gmail.com>"]
 edition = "2021"
 repository = "https://github.com/cloneable/stc/"
