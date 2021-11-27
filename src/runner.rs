@@ -1,7 +1,6 @@
 use crate::git;
 use ::anyhow::Result;
 use ::std::{
-    assert_ne,
     collections::HashMap,
     convert::Into,
     option::Option::Some,
@@ -28,26 +27,22 @@ impl<'a> Runner<'a> {
 
 impl<'a> git::Git for Runner<'a> {
     fn exec(&self, args: &[&str]) -> Result<git::ExecStatus> {
-        let cmd = Command::new(self.gitpath)
+        let output = Command::new(self.gitpath)
             .args(args)
             .current_dir(&self.workdir)
             .envs(self.env.iter())
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()?;
+            .output()?;
 
-        let output = cmd.wait_with_output()?;
         if output.status.success() {
-            ::std::eprintln!("[OK] git {:?}", args);
-            Ok(git::ExecStatus::from(0, output.stdout, output.stderr))
+            Ok(git::ExecStatus::new(0, output.stdout, output.stderr))
         } else if let Some(code) = output.status.code() {
-            assert_ne!(code, 0);
-            ::std::eprintln!("[ERR {:?}] git {:?}", code, args);
-            Err(git::ExecStatus::from(code, output.stdout, output.stderr).into())
+            ::std::assert_ne!(code, 0);
+            Err(git::ExecStatus::new(code, output.stdout, output.stderr).into())
         } else {
-            ::std::eprintln!("[ERR] git {:?}", args);
-            Err(git::ExecStatus::from(1, output.stdout, output.stderr).into())
+            Err(git::ExecStatus::new(1, output.stdout, output.stderr).into())
         }
     }
 }

@@ -8,7 +8,6 @@ use ::std::{
     clone::Clone,
     collections::{BTreeSet, HashMap},
     convert::{AsRef, Into},
-    format,
     iter::{IntoIterator, Iterator},
     option::Option::{self, Some},
     result::Result::{Err, Ok},
@@ -37,15 +36,7 @@ pub struct ExecStatus {
 }
 
 impl ExecStatus {
-    pub fn new(exitcode: i32, stdout: String, stderr: String) -> Self {
-        ExecStatus {
-            exitcode,
-            stdout,
-            stderr,
-        }
-    }
-
-    pub fn from(exitcode: i32, stdout: Vec<u8>, stderr: Vec<u8>) -> Self {
+    pub fn new(exitcode: i32, stdout: Vec<u8>, stderr: Vec<u8>) -> Self {
         // TODO: use OsString.
         ExecStatus {
             exitcode,
@@ -53,17 +44,27 @@ impl ExecStatus {
             stderr: String::from_utf8_lossy(stderr.as_slice()).to_string(),
         }
     }
-
-    pub fn result(self) -> Result<()> {
-        match self.exitcode {
-            0 => Ok(()),
-            _ => Err(self.into()),
-        }
-    }
 }
 
 pub trait Git {
     fn exec(&self, args: &[&str]) -> Result<ExecStatus>;
+
+    fn exec_log(&self, args: &[&str]) -> Result<()> {
+        match self.exec(args) {
+            Ok(_) => {
+                ::std::eprintln!("[OK] git {:?}", args);
+                Ok(())
+            }
+            Err(err) => match err.downcast::<ExecStatus>() {
+                Ok(status) => {
+                    ::std::assert_ne!(status.exitcode, 0);
+                    ::std::eprintln!("[ERR {:?}] git {:?}", status.exitcode, args);
+                    Err(status.into())
+                }
+                Err(err) => Err(err),
+            },
+        }
+    }
 
     fn snapshot(&self) -> Result<Repository> {
         let status = self.exec(&["for-each-ref", "--format", FIELD_FORMATS.join(",").as_str()])?;
@@ -81,26 +82,27 @@ pub trait Git {
     }
 
     fn create_branch(&self, name: &BranchName, base: &BranchName) -> Result<()> {
-        self.exec(&["branch", "--create-reflog", name.as_str(), base.as_str()])
+        self.exec_log(&["branch", "--create-reflog", name.as_str(), base.as_str()])
             .map(|_| {})
     }
 
     fn switch_branch(&self, b: &BranchName) -> Result<()> {
-        self.exec(&["switch", "--no-guess", b.as_str()]).map(|_| {})
+        self.exec_log(&["switch", "--no-guess", b.as_str()])
+            .map(|_| {})
     }
 
     fn create_symref(&self, name: &RefName, target: &RefName, reason: &'static str) -> Result<()> {
-        self.exec(&["symbolic-ref", "-m", reason, name.as_str(), target.as_str()])
+        self.exec_log(&["symbolic-ref", "-m", reason, name.as_str(), target.as_str()])
             .map(|_| {})
     }
 
     fn delete_symref(&self, name: &RefName) -> Result<()> {
-        self.exec(&["symbolic-ref", "--delete", name.as_str()])
+        self.exec_log(&["symbolic-ref", "--delete", name.as_str()])
             .map(|_| {})
     }
 
     fn create_ref(&self, name: &RefName, commit: &ObjectName) -> Result<()> {
-        self.exec(&[
+        self.exec_log(&[
             "update-ref",
             "--no-deref",
             "--create-reflog",
@@ -117,7 +119,7 @@ pub trait Git {
         new_commit: &ObjectName,
         cur_commit: &ObjectName,
     ) -> Result<()> {
-        self.exec(&[
+        self.exec_log(&[
             "update-ref",
             "--no-deref",
             "--create-reflog",
@@ -129,7 +131,7 @@ pub trait Git {
     }
 
     fn delete_ref(&self, name: &RefName, cur_commit: &ObjectName) -> Result<()> {
-        self.exec(&[
+        self.exec_log(&[
             "update-ref",
             "--no-deref",
             "-d",
@@ -140,7 +142,7 @@ pub trait Git {
     }
 
     fn rebase_onto(&self, name: &BranchName) -> Result<()> {
-        self.exec(&[
+        self.exec_log(&[
             "rebase",
             "--committer-date-is-author-date",
             "--onto",
@@ -152,27 +154,28 @@ pub trait Git {
     }
 
     fn push(&self, name: &BranchName, remote: &RemoteName, expect: &ObjectName) -> Result<()> {
-        self.exec(&[
+        self.exec_log(&[
             "push",
             "--set-upstream",
-            format!("--force-with-lease={}:{}", name.as_str(), expect.as_str()).as_str(),
+            ::std::format!("--force-with-lease={}:{}", name.as_str(), expect.as_str()).as_str(),
             remote.as_str(),
-            format!("{}:{}", name.as_str(), name.as_str()).as_str(),
+            ::std::format!("{}:{}", name.as_str(), name.as_str()).as_str(),
         ])
         .map(|_| {})
     }
 
     fn config_set(&self, key: &str, value: &str) -> Result<()> {
-        self.exec(&["config", "--local", key, value]).map(|_| {})
+        self.exec_log(&["config", "--local", key, value])
+            .map(|_| {})
     }
 
     fn config_add(&self, key: &str, value: &str) -> Result<()> {
-        self.exec(&["config", "--local", "--add", key, value])
+        self.exec_log(&["config", "--local", "--add", key, value])
             .map(|_| {})
     }
 
     fn config_unset_pattern(&self, key: &str, pattern: &str) -> Result<()> {
-        match self.exec(&[
+        match self.exec_log(&[
             "config",
             "--local",
             "--fixed-value",
@@ -190,7 +193,7 @@ pub trait Git {
     }
 
     fn fetch_all_prune(&self) -> Result<()> {
-        self.exec(&["fetch", "--all", "--prune"]).map(|_| {})
+        self.exec_log(&["fetch", "--all", "--prune"]).map(|_| {})
     }
 
     fn forkpoint(&self, base: &RefName, branch: &RefName) -> Result<ObjectName> {
