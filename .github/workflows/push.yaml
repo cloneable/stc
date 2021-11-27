@@ -13,11 +13,20 @@ jobs:
           persist-credentials: false
 
       - name: Install toolchain
+        id: toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           components: clippy, rustfmt
+
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/
+            target/
+          key: cargo-${{ runner.os }}-${{ steps.toolchain.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.toml', '**/Cargo.lock') }}
 
       - name: cargo fmt
         run: cargo fmt --all -- --check
