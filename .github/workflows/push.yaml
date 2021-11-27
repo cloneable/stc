@@ -27,6 +27,8 @@ jobs:
             ~/.cargo/
             target/
           key: cargo-${{ runner.os }}-${{ steps.toolchain.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.toml', '**/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ steps.toolchain.outputs.rustc_hash }}-
 
       - name: cargo fmt
         run: cargo fmt --all -- --check
