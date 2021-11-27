@@ -1,11 +1,13 @@
 use crate::git;
+use ::anyhow::Result;
 use ::std::{
     assert_ne,
     collections::HashMap,
+    convert::Into,
     option::Option::Some,
     path::PathBuf,
     process::{Command, Stdio},
-    result::Result::{self, Err, Ok},
+    result::Result::{Err, Ok},
 };
 
 pub struct Runner<'a> {
@@ -15,17 +17,17 @@ pub struct Runner<'a> {
 }
 
 impl<'a> Runner<'a> {
-    pub fn new(gitpath: &'a str) -> Self {
-        Runner {
+    pub fn new(gitpath: &'a str) -> Result<Self> {
+        Ok(Runner {
             gitpath,
-            workdir: ::std::env::current_dir().expect("cannot determine current working directory"),
+            workdir: ::std::env::current_dir()?,
             env: HashMap::<&'a str, &'a str>::new(),
-        }
+        })
     }
 }
 
 impl<'a> git::Git for Runner<'a> {
-    fn exec(&self, args: &[&str]) -> Result<git::Status, git::Status> {
+    fn exec(&self, args: &[&str]) -> Result<git::ExecStatus> {
         let cmd = Command::new(self.gitpath)
             .args(args)
             .current_dir(&self.workdir)
@@ -33,20 +35,19 @@ impl<'a> git::Git for Runner<'a> {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()
-            .expect("failed to start git");
+            .spawn()?;
 
-        let output = cmd.wait_with_output().expect("failed to wait on git");
+        let output = cmd.wait_with_output()?;
         if output.status.success() {
             ::std::eprintln!("[OK] git {:?}", args);
-            Ok(git::Status::new(0, output.stdout, output.stderr))
+            Ok(git::ExecStatus::from(0, output.stdout, output.stderr))
         } else if let Some(code) = output.status.code() {
             assert_ne!(code, 0);
             ::std::eprintln!("[ERR {:?}] git {:?}", code, args);
-            Err(git::Status::new(code, output.stdout, output.stderr))
+            Err(git::ExecStatus::from(code, output.stdout, output.stderr).into())
         } else {
             ::std::eprintln!("[ERR] git {:?}", args);
-            Err(git::Status::new(1, output.stdout, output.stderr))
+            Err(git::ExecStatus::from(1, output.stdout, output.stderr).into())
         }
     }
 }

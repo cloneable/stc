@@ -1,10 +1,26 @@
 use crate::git;
+use ::anyhow::Result;
 use ::std::{
+    self,
+    convert::Into,
     option::Option::{self, Some},
-    result::Result::{self, Err, Ok},
-    string::String,
-    vec::Vec,
+    result::Result::{Err, Ok},
+    string::{String, ToString},
+    write,
 };
+use ::thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum StcError {
+    #[error("base branch already defined")]
+    BaseBranchAlreadyDefined,
+    #[error("base not specified")]
+    BaseNotSpecified,
+    #[error("HEAD not defined")]
+    HeadNotDefined,
+    #[error("ref not found: {name:?}")]
+    RefNotFound { name: String },
+}
 
 pub struct Stc<G: git::Git> {
     git: G,
@@ -15,7 +31,7 @@ impl<G: git::Git> Stc<G> {
         Stc { git }
     }
 
-    pub fn init(&self) -> Result<(), git::Status> {
+    pub fn init(&self) -> Result<()> {
         let g = &self.git;
         g.config_add("transfer.hideRefs", git::STC_REF_PREFIX)?;
         g.config_add("log.excludeDecoration", git::STC_REF_PREFIX)?;
@@ -28,7 +44,7 @@ impl<G: git::Git> Stc<G> {
         Ok(())
     }
 
-    pub fn clean(&self) -> Result<(), git::Status> {
+    pub fn clean(&self) -> Result<()> {
         let g = &self.git;
         g.config_unset_pattern("transfer.hideRefs", git::STC_REF_PREFIX)?;
         g.config_unset_pattern("log.excludeDecoration", git::STC_REF_PREFIX)?;
@@ -42,10 +58,10 @@ impl<G: git::Git> Stc<G> {
         Ok(())
     }
 
-    pub fn start(&self, name: String) -> Result<(), git::Status> {
+    pub fn start(&self, name: String) -> Result<()> {
         let g = &self.git;
         let repo = g.snapshot()?;
-        let base_branch = repo.head().ok_or_else(|| git::Status::with(1))?;
+        let base_branch = repo.head().ok_or(StcError::HeadNotDefined)?;
         let new_name = g.check_branchname(&name)?;
         g.create_branch(&new_name, base_branch)?;
         g.switch_branch(&new_name)?;
@@ -57,26 +73,32 @@ impl<G: git::Git> Stc<G> {
         let base_refname = base_branch.refname();
         let base_ref = repo
             .get_ref(&base_refname)
-            .ok_or_else(|| git::Status::with(1))?;
+            .ok_or_else(|| StcError::RefNotFound {
+                name: base_refname.as_str().to_string(),
+            })?;
         g.create_ref(&new_name.stc_start_refname(), &base_ref.objectname)?;
 
         Ok(())
     }
 
-    pub fn push(&self) -> Result<(), git::Status> {
+    pub fn push(&self) -> Result<()> {
         let g = &self.git;
 
         let expected_commit: git::ObjectName;
         {
             let repo = g.snapshot()?;
-            let cur_branch = repo.head().ok_or_else(|| git::Status::with(1))?;
+            let cur_branch = repo.head().ok_or(StcError::HeadNotDefined)?;
             let stc_base_refname = cur_branch.stc_base_refname();
-            let base_symref = repo
-                .get_ref(&stc_base_refname)
-                .ok_or_else(|| git::Status::with(1))?;
-            let base_ref = repo
-                .get_ref(&base_symref.symref_target)
-                .ok_or_else(|| git::Status::with(1))?;
+            let base_symref =
+                repo.get_ref(&stc_base_refname)
+                    .ok_or_else(|| StcError::RefNotFound {
+                        name: stc_base_refname.as_str().to_string(),
+                    })?;
+            let base_ref =
+                repo.get_ref(&base_symref.symref_target)
+                    .ok_or_else(|| StcError::RefNotFound {
+                        name: base_symref.symref_target.as_str().to_string(),
+                    })?;
             if let Some(remote_ref) = repo.get_ref(&cur_branch.stc_remote_refname()) {
                 expected_commit = remote_ref.objectname.owning_clone();
             } else {
@@ -86,11 +108,13 @@ impl<G: git::Git> Stc<G> {
         }
         {
             let repo = g.snapshot()?;
-            let cur_branch = repo.head().ok_or_else(|| git::Status::with(1))?;
+            let cur_branch = repo.head().ok_or(StcError::HeadNotDefined)?;
             let cur_refname = cur_branch.refname();
             let cur_ref = repo
                 .get_ref(&cur_refname)
-                .ok_or_else(|| git::Status::with(1))?;
+                .ok_or_else(|| StcError::RefNotFound {
+                    name: cur_refname.as_str().to_string(),
+                })?;
             g.update_ref(
                 &cur_branch.stc_remote_refname(),
                 &cur_ref.objectname,
@@ -101,19 +125,23 @@ impl<G: git::Git> Stc<G> {
         Ok(())
     }
 
-    pub fn rebase(&self) -> Result<(), git::Status> {
+    pub fn rebase(&self) -> Result<()> {
         let g = &self.git;
 
         let repo = g.snapshot()?;
-        let branch = repo.head().ok_or_else(|| git::Status::with(1))?;
+        let branch = repo.head().ok_or(StcError::HeadNotDefined)?;
         let stc_base_refname = branch.stc_base_refname();
         let stc_start_refname = branch.stc_start_refname();
         let base_ref = repo
             .get_ref(&stc_base_refname)
-            .ok_or_else(|| git::Status::with(1))?;
+            .ok_or_else(|| StcError::RefNotFound {
+                name: stc_base_refname.as_str().to_string(),
+            })?;
         let start_ref = repo
             .get_ref(&stc_start_refname)
-            .ok_or_else(|| git::Status::with(1))?;
+            .ok_or_else(|| StcError::RefNotFound {
+                name: stc_start_refname.as_str().to_string(),
+            })?;
         g.rebase_onto(branch)?;
         g.update_ref(
             &branch.stc_start_refname(),
@@ -124,7 +152,7 @@ impl<G: git::Git> Stc<G> {
         Ok(())
     }
 
-    pub fn sync(&self) -> Result<(), git::Status> {
+    pub fn sync(&self) -> Result<()> {
         let g = &self.git;
 
         g.fetch_all_prune()?;
@@ -132,7 +160,7 @@ impl<G: git::Git> Stc<G> {
         Ok(())
     }
 
-    pub fn fix(&self, branch: Option<String>, base: Option<String>) -> Result<(), git::Status> {
+    pub fn fix(&self, branch: Option<String>, base: Option<String>) -> Result<()> {
         let g = &self.git;
 
         let repo = g.snapshot()?;
@@ -143,11 +171,7 @@ impl<G: git::Git> Stc<G> {
                 let base_branch = g.check_branchname(&base_branchname)?;
                 if let Some(base_symref) = repo.get_ref(&branch.stc_base_refname()) {
                     if base_symref.symref_target != base_branch.refname() {
-                        return Err(git::Status::new(
-                            1,
-                            Vec::<u8>::new(),
-                            "base branch already defined".as_bytes().to_vec(),
-                        ));
+                        return Err(StcError::BaseBranchAlreadyDefined.into());
                     }
                 } else {
                     g.create_symref(
@@ -163,11 +187,7 @@ impl<G: git::Git> Stc<G> {
                     g.create_ref(&branch.stc_start_refname(), &forkpoint)?;
                 }
             } else {
-                return Err(git::Status::new(
-                    1,
-                    Vec::<u8>::new(),
-                    "base not specified".as_bytes().to_vec(),
-                ));
+                return Err(StcError::BaseNotSpecified.into());
             }
         }
 
