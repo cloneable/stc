@@ -1,5 +1,6 @@
 #![no_implicit_prelude]
 #![allow(missing_docs)] // TODO: change to warn/deny
+#![allow(dead_code)] // TODO: remove
 
 use ::anyhow::Result;
 use ::clap::{self, Parser, Subcommand};
