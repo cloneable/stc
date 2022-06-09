@@ -1,5 +1,7 @@
 # stc
 
+(Work in Progress)
+
 Easy git rebasing of stacked feature branches
 
 ## Audience
