@@ -1,10 +1,10 @@
 #![no_implicit_prelude]
 #![allow(missing_docs)] // TODO: change to warn/deny
-#![allow(dead_code)] // TODO: remove
 
 use ::anyhow::Result;
 use ::clap::{self, Parser, Subcommand};
 use ::std::{
+    format,
     option::Option::{self, None, Some},
     string::String,
 };
@@ -36,9 +36,11 @@ enum Command {
         override_usage = "stc fix [<branch> [<base]]"
     )]
     Fix {
-        #[clap(name = "branch", about = "name of the branch to fix")]
+        /// name of the branch to fix
+        #[clap(name = "branch")]
         branch: Option<String>,
-        #[clap(name = "base", about = "name of the base branch")]
+        /// name of the base branch
+        #[clap(name = "base")]
         base: Option<String>,
     },
 
@@ -69,7 +71,8 @@ enum Command {
         override_usage = "stc start <branch>"
     )]
     Start {
-        #[clap(name = "branch", about = "name of the new branch to create")]
+        /// name of the new branch to create
+        #[clap(name = "branch")]
         branch: String,
     },
 
