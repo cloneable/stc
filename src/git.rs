@@ -280,7 +280,7 @@ impl<'a> RefName<'a> {
     }
 
     pub fn branchname(&'a self) -> BranchName<'a> {
-        let (_, branchname) = self.0.rsplit_once("/").unwrap();
+        let (_, branchname) = self.0.rsplit_once('/').unwrap();
         BranchName::new(branchname)
     }
 }
