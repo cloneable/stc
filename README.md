@@ -1,6 +1,6 @@
 # stc
 
-(Work in Progress)
+(work in progress; very experimental)
 
 Easy git rebasing of stacked feature branches
 

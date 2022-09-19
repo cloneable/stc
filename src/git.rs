@@ -1,21 +1,15 @@
-use ::anyhow::Result;
-use ::const_format::concatcp;
-use ::csv::ReaderBuilder;
-use ::serde::Deserialize;
-use ::std::{
-    self,
+use anyhow::Result;
+use const_format::concatcp;
+use csv::ReaderBuilder;
+use serde::Deserialize;
+use std::{
     borrow::{Cow, ToOwned},
-    clone::Clone,
     collections::{BTreeSet, HashMap},
     convert::{AsRef, Into},
-    iter::{IntoIterator, Iterator},
-    option::Option::{self, Some},
-    result::Result::{Err, Ok},
     string::{String, ToString},
-    vec::Vec,
     write,
 };
-use ::thiserror::Error;
+use thiserror::Error;
 
 pub const NON_EXISTANT_OBJECT: ObjectName<'static> =
     ObjectName::new("0000000000000000000000000000000000000000");
@@ -285,7 +279,7 @@ impl<'a> RefName<'a> {
     }
 }
 
-#[derive(Deserialize, PartialEq, PartialOrd, Clone, Debug)]
+#[derive(Deserialize, PartialEq, Eq, PartialOrd, Clone, Debug)]
 pub struct ObjectName<'a>(pub Cow<'a, str>);
 
 impl<'a> ObjectName<'a> {
@@ -302,7 +296,7 @@ impl<'a> ObjectName<'a> {
     }
 }
 
-#[derive(Deserialize, PartialEq, PartialOrd, Debug)]
+#[derive(Deserialize, PartialEq, Eq, PartialOrd, Debug)]
 pub struct RemoteName<'a>(Cow<'a, str>);
 
 impl<'a> RemoteName<'a> {
@@ -319,7 +313,7 @@ impl<'a> RemoteName<'a> {
     }
 }
 
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum RefType {
     Commit,
@@ -328,7 +322,7 @@ pub enum RefType {
     Tag,
 }
 
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct Ref<'a> {
     pub name: RefName<'a>,
     pub head: bool,

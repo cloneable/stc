@@ -1,14 +1,7 @@
 use crate::git;
-use ::anyhow::Result;
-use ::std::{
-    self,
-    convert::Into,
-    option::Option::{self, Some},
-    result::Result::{Err, Ok},
-    string::{String, ToString},
-    write,
-};
-use ::thiserror::Error;
+use anyhow::Result;
+use std::write;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum StcError {

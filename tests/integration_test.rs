@@ -1,7 +1,7 @@
-use ::assert_fs::{assert::PathAssert, fixture::PathChild};
-use ::phf::{phf_map, Map};
-use ::predicates::prelude::*;
-use ::std::{
+use assert_fs::{assert::PathAssert, fixture::PathChild};
+use phf::{phf_map, Map};
+use predicates::prelude::*;
+use std::{
     env,
     fs::File,
     io::{Read, Write},
