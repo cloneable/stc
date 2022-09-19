@@ -1,12 +1,9 @@
 use crate::git;
-use ::anyhow::Result;
-use ::std::{
+use anyhow::Result;
+use std::{
     collections::HashMap,
-    convert::Into,
-    option::Option::Some,
     path::PathBuf,
     process::{Command, Stdio},
-    result::Result::{Err, Ok},
 };
 
 pub struct Runner<'a> {

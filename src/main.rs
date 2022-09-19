@@ -1,14 +1,8 @@
-#![no_implicit_prelude]
 #![allow(missing_docs)] // TODO: change to warn/deny
 #![allow(dead_code)] // TODO: remove
 
-use ::anyhow::Result;
-use ::clap::{self, Parser, Subcommand};
-use ::std::{
-    format,
-    option::Option::{self, None, Some},
-    string::String,
-};
+use anyhow::Result;
+use clap::{self, Parser, Subcommand};
 
 mod git;
 mod runner;
