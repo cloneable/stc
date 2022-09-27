@@ -66,7 +66,8 @@ pub trait Git {
         let head = refs
             .values()
             .find(|r| r.head)
-            .map(|r| r.name.branchname().owning_clone());
+            .and_then(|r| r.name.branchname())
+            .map(|bn| bn.owning_clone());
         Ok(Repository { refs, head })
     }
 
@@ -217,8 +218,8 @@ impl<'a> Repository<'a> {
         self.refs
             .iter()
             .filter(|(name, _)| name.0.starts_with(STC_REF_PREFIX))
-            .map(|(name, _)| name.branchname())
-            .collect::<BTreeSet<BranchName>>()
+            .map(|(name, _)| name.branchname().unwrap())
+            .collect::<BTreeSet<_>>()
             .into_iter()
             .collect()
     }
@@ -273,9 +274,16 @@ impl<'a> RefName<'a> {
         &self.0
     }
 
-    pub fn branchname(&'a self) -> BranchName<'a> {
-        let (_, branchname) = self.0.rsplit_once('/').unwrap();
-        BranchName::new(branchname)
+    pub fn branchname(&'a self) -> Option<BranchName<'a>> {
+        if let Some(suffix) = self.0.strip_prefix(STC_REF_PREFIX) {
+            if let Some((_, branchname)) = suffix.split_once('/') {
+                return Some(BranchName::new(branchname));
+            }
+        }
+        if let Some(branchname) = self.0.strip_prefix(BRANCH_REF_PREFIX) {
+            return Some(BranchName::new(branchname));
+        }
+        None
     }
 }
 

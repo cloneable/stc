@@ -130,16 +130,16 @@ fn test_stc_start() {
         .assert(predicate::path::missing());
     let main_ref = read_file(repo.tempdir.child("clone/.git/refs/heads/main").path());
 
-    stc.arg("start").arg("test-branch").assert().success();
+    stc.arg("start").arg("feat/test-branch").assert().success();
 
     repo.tempdir
-        .child("clone/.git/refs/stc/start/test-branch")
+        .child("clone/.git/refs/stc/start/feat/test-branch")
         .assert(main_ref);
     repo.tempdir
-        .child("clone/.git/refs/stc/base/test-branch")
+        .child("clone/.git/refs/stc/base/feat/test-branch")
         .assert("ref: refs/heads/main\n");
     repo.tempdir
-        .child("clone/.git/refs/stc/remote/test-branch")
+        .child("clone/.git/refs/stc/remote/feat/test-branch")
         .assert(predicate::path::missing());
 }
 
@@ -149,7 +149,7 @@ fn test_stc_push() {
 
     {
         let mut stc = new_stc_cmd(&repo.clone_dir);
-        stc.arg("start").arg("test-branch").assert().success();
+        stc.arg("start").arg("feat/test-branch").assert().success();
     }
 
     write_file(&repo.clone_dir, "test-branch.txt", "test-branch #1\n");
@@ -158,12 +158,12 @@ fn test_stc_push() {
 
     let branch_ref = read_file(
         repo.tempdir
-            .child("clone/.git/refs/heads/test-branch")
+            .child("clone/.git/refs/heads/feat/test-branch")
             .path(),
     );
 
     repo.tempdir
-        .child("clone/.git/refs/stc/remote/test-branch")
+        .child("clone/.git/refs/stc/remote/feat/test-branch")
         .assert(predicate::path::missing());
 
     {
@@ -172,7 +172,7 @@ fn test_stc_push() {
     }
 
     repo.tempdir
-        .child("clone/.git/refs/stc/remote/test-branch")
+        .child("clone/.git/refs/stc/remote/feat/test-branch")
         .assert(&branch_ref);
 
     {
@@ -182,6 +182,6 @@ fn test_stc_push() {
     }
 
     repo.tempdir
-        .child("clone/.git/refs/stc/remote/test-branch")
+        .child("clone/.git/refs/stc/remote/feat/test-branch")
         .assert(&branch_ref);
 }
