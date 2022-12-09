@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::Result;
 use const_format::concatcp;
 use csv::ReaderBuilder;
 use serde::Deserialize;

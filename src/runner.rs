@@ -1,5 +1,5 @@
 use crate::git;
-use anyhow::Result;
+use color_eyre::Result;
 use std::{
     collections::HashMap,
     path::PathBuf,
