@@ -2,80 +2,51 @@
 #![allow(dead_code)] // TODO: remove
 
 use anyhow::Result;
-use clap::{self, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 
 mod git;
 mod runner;
 mod stc;
 
 #[derive(Parser)]
-#[clap(about, version)]
+#[command(about, version, override_usage = "stc <command>")]
 struct Root {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     subcommand: Command,
 }
 
 #[derive(Subcommand)]
-#[clap()]
 enum Command {
-    #[clap(
-        name = "clean",
-        about = "Cleans any stc related refs and settings from repo.",
-        override_usage = "stc clean"
-    )]
+    /// Cleans any stc related refs and settings from repo.
     Clean,
 
-    #[clap(
-        name = "fix",
-        about = "Adds, updates and deletes tracking refs if needed.",
-        override_usage = "stc fix [<branch> [<base]]"
-    )]
+    /// Adds, updates and deletes tracking refs if needed.
     Fix {
         /// name of the branch to fix
-        #[clap(name = "branch")]
+        #[arg(name = "branch")]
         branch: Option<String>,
         /// name of the base branch
-        #[clap(name = "base")]
+        #[arg(name = "base")]
         base: Option<String>,
     },
 
-    #[clap(
-        name = "init",
-        about = "Initializes the repo and tries to set stc refs for any non-default branches.",
-        override_usage = "stc init"
-    )]
+    /// Initializes the repo and tries to set stc refs for any non-default branches.
     Init,
 
-    #[clap(
-        name = "push",
-        about = "Sets remote branch head to what local branch head points to.",
-        override_usage = "stc push"
-    )]
+    /// Sets remote branch head to what local branch head points to.
     Push,
 
-    #[clap(
-        name = "rebase",
-        about = "Rebases current branch on top of its base branch.",
-        override_usage = "stc rebase"
-    )]
+    /// Rebases current branch on top of its base branch.
     Rebase,
 
-    #[clap(
-        name = "start",
-        about = "Starts a new branch off of current branch.",
-        override_usage = "stc start <branch>"
-    )]
+    /// Starts a new branch off of current branch.
     Start {
         /// name of the new branch to create
-        #[clap(name = "branch")]
+        #[arg(name = "branch")]
         branch: String,
     },
 
-    #[clap(
-        name = "sync",
-        about = "Fetches all branches and tags and prunes deleted ones.",
-        override_usage = "stc sync"
-    )]
+    /// Fetches all branches and tags and prunes deleted ones.
     Sync,
 }
 
@@ -91,5 +62,16 @@ fn main() -> Result<()> {
         Command::Rebase => stc.rebase(),
         Command::Start { branch } => stc.start(branch),
         Command::Sync => stc.sync(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verify_commands() {
+        use clap::CommandFactory;
+        Root::command().debug_assert()
     }
 }
