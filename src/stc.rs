@@ -1,5 +1,5 @@
 use crate::git;
-use anyhow::Result;
+use color_eyre::Result;
 use std::write;
 use thiserror::Error;
 

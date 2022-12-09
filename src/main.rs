@@ -1,7 +1,6 @@
 #![allow(missing_docs)] // TODO: change to warn/deny
 #![allow(dead_code)] // TODO: remove
 
-use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 mod git;
@@ -50,7 +49,7 @@ enum Command {
     Sync,
 }
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     let root = Root::parse();
     let runner = runner::Runner::new("git")?;
     let stc = stc::Stc::new(runner);
