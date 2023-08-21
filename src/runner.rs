@@ -34,12 +34,12 @@ impl<'a> git::Git for Runner<'a> {
             .output()?;
 
         if output.status.success() {
-            Ok(git::ExecStatus::new(0, output.stdout, output.stderr))
+            Ok(git::ExecStatus::new(0, &output.stdout, &output.stderr))
         } else if let Some(code) = output.status.code() {
             ::std::assert_ne!(code, 0);
-            Err(git::ExecStatus::new(code, output.stdout, output.stderr).into())
+            Err(git::ExecStatus::new(code, &output.stdout, &output.stderr).into())
         } else {
-            Err(git::ExecStatus::new(1, output.stdout, output.stderr).into())
+            Err(git::ExecStatus::new(1, &output.stdout, &output.stderr).into())
         }
     }
 }

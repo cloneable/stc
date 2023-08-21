@@ -59,7 +59,7 @@ fn main() -> color_eyre::Result<()> {
         Command::Init => stc.init(),
         Command::Push => stc.push(),
         Command::Rebase => stc.rebase(),
-        Command::Start { branch } => stc.start(branch),
+        Command::Start { branch } => stc.start(&branch),
         Command::Sync => stc.sync(),
     }
 }

@@ -7,7 +7,6 @@ use std::{
     collections::{BTreeSet, HashMap},
     convert::{AsRef, Into},
     string::{String, ToString},
-    write,
 };
 use thiserror::Error;
 
@@ -30,12 +29,12 @@ pub struct ExecStatus {
 }
 
 impl ExecStatus {
-    pub fn new(exitcode: i32, stdout: Vec<u8>, stderr: Vec<u8>) -> Self {
+    pub fn new(exitcode: i32, stdout: &[u8], stderr: &[u8]) -> Self {
         // TODO: use OsString.
         ExecStatus {
             exitcode,
-            stdout: String::from_utf8_lossy(stdout.as_slice()).to_string(),
-            stderr: String::from_utf8_lossy(stderr.as_slice()).to_string(),
+            stdout: String::from_utf8_lossy(stdout).to_string(),
+            stderr: String::from_utf8_lossy(stderr).to_string(),
         }
     }
 }
@@ -46,13 +45,13 @@ pub trait Git {
     fn exec_log(&self, args: &[&str]) -> Result<()> {
         match self.exec(args) {
             Ok(_) => {
-                ::std::eprintln!("[OK] git {:?}", args);
+                ::std::eprintln!("[OK] git {args:?}");
                 Ok(())
             }
             Err(err) => match err.downcast::<ExecStatus>() {
                 Ok(status) => {
                     ::std::assert_ne!(status.exitcode, 0);
-                    ::std::eprintln!("[ERR {:?}] git {:?}", status.exitcode, args);
+                    ::std::eprintln!("[ERR {:?}] git {args:?}", status.exitcode);
                     Err(status.into())
                 }
                 Err(err) => Err(err),
